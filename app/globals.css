@@ -4485,6 +4485,7 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
 @media (max-width: 760px) {
   .hero-banner { padding-top: 126px; padding-bottom: 58px; }
   .hero-inner { width: calc(100% - 36px); gap: 28px; }
+  .home-inner .race-rail { margin-top: 0; padding-top: 24px; }
 }
 
 @media (max-width: 599px) {
