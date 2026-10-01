@@ -78,7 +78,7 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
           )}
           {username && isAdmin ? (
             <details className="nav-account-menu" ref={accountMenuRef}>
-              <summary className="nav-admin nav-icon" title="Cuenta" aria-label="Abrir opciones de cuenta"><UserRound size={19} aria-hidden="true" /></summary>
+              <summary className="nav-admin nav-icon" title="Cuenta" aria-label="Abrir opciones de cuenta"><UserRound size={19} aria-hidden="true" /><span className="nav-mobile-label">Mi cuenta</span></summary>
               <div className="nav-account-popover nav-merchant-popover">
                 <strong>{username}</strong>
                 <form action={logout}><button type="submit">Cerrar sesión</button></form>
@@ -86,7 +86,8 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
             </details>
           ) : (
             <Link href="/admin" onClick={() => setMenuOpen(false)} className="nav-admin nav-icon" title="Administración" aria-label="Administración" aria-current={pathname.startsWith("/admin") ? "page" : undefined}>
-              <UserRound size={19} />
+              <UserRound size={19} aria-hidden="true" />
+              <span className="nav-mobile-label">Administración</span>
             </Link>
           )}
         </nav>
