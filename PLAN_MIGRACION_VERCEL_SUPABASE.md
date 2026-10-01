@@ -2,18 +2,21 @@
 
 ## Estado observado
 
-- El repositorio local está inicializado con la rama `migration/supabase` y el remoto `AndresSegura5/elhierro-premia`; aún no hay commits ni se ha publicado código. El repositorio remoto está vacío y es público.
-- El usuario tiene cuentas de Vercel y Supabase, pero todavía no ha creado proyectos para esta aplicación. Quedan por concretar el equipo de Vercel y la organización/región de Supabase.
+- El repositorio público `AndresSegura5/elhierro-premia` ya tiene publicada la rama `migration/supabase`, con el commit `70c867f` (`Prepare Supabase and Vercel migration`).
+- En Vercel se creó `elhierro-premia` en el equipo personal `Andres' projects` y se conectó al repositorio GitHub. Todavía falta crear el primer despliegue. Se añadieron variables sensibles para Preview y Production; la URL pública quedó configurada en Production.
+- Supabase tiene el proyecto `elhierro-premia` (`xbkojjftmyqzbpuoptqh`) en la organización disponible y en Irlanda (`eu-west-1`). Está saludable y usa el pooler de transacciones para Vercel.
 - El proyecto mantiene SQLite para desarrollo local y ya incluye un repositorio asíncrono PostgreSQL para Supabase (`DATABASE_URL`), con TLS, máximo de una conexión y prepared statements desactivados para el pooler serverless.
 - Las lecturas y escrituras de carreras, comercios, bonos, canjes y cuentas se han convertido para el repositorio asíncrono. En producción se exige `DATABASE_URL`; no se usa SQLite temporal.
 - La base local contiene 3 carreras, 5 comercios, 2 cuentas (1 administradora y 1 de comercio), 3 sesiones, 400 bonos Bestial y ningún canje.
 - Por indicación expresa, los 400 bonos no se migrarán. La base remota arrancará sin bonos emitidos y se hará una emisión nueva desde administración. Los códigos/QR anteriores dejarán de ser válidos.
 - Carreras, categorías, condiciones, textos de las páginas públicas y comercios se han modelado en tablas (`races`, `business_categories`, `coupon_rules`, `site_content`, `businesses`). En modo PostgreSQL las páginas leen estos valores desde Supabase; los valores estáticos quedan como semillas y respaldo para el desarrollo local.
 - `public/municipios-canarias.geojson` ocupaba unos 47,5 MB. Se ha generado `public/municipios-el-hierro.geojson`, de unos 2,5 MB, y el mapa ya carga solo los tres municipios de la isla; el original se excluye de Git.
-- `.gitignore` excluye bases locales, variables de entorno, recursos grandes locales y ficheros temporales. No se han configurado credenciales de servicios.
-- Las altas y los restablecimientos de acceso de comercios generan contraseñas temporales aleatorias. Se retiró el generador determinista basado en nombre/teléfono y la exportación ya no revela contraseñas. El importador rotará las claves existentes, forzará a cada administrador a establecer una clave nueva y guardará las claves temporales en un fichero local excluido de Git.
-- Existe una migración SQL versionada en `supabase/migrations/` con restricciones, claves foráneas, RLS sin políticas públicas y función de rate limit compartido.
+- `.gitignore` excluye bases locales, variables de entorno, recursos grandes locales y ficheros temporales. Las claves de Supabase y las credenciales temporales se guardan solo bajo `.data/` o en los gestores de entorno.
+- Las altas y los restablecimientos de acceso de comercios generan contraseñas temporales aleatorias. Se retiró el generador determinista basado en nombre/teléfono y la exportación ya no revela contraseñas. La importación rotó las claves existentes, forzó al administrador a establecer una clave nueva y guardó las claves temporales en un fichero local excluido de Git.
+- La migración `20261001000000_initial_schema.sql` se aplicó y quedó registrada en el historial de Supabase. Incluye restricciones, claves foráneas, RLS sin políticas públicas y la función de rate limit compartido.
 - `scripts/import-local-data-to-supabase.mjs` importa carreras, comercios, categorías, condiciones, contenido público y cuentas desde SQLite a un proyecto vacío. No lee ni importa bonos, canjes, caché o sesiones.
+- La importación inicial terminó: 3 carreras, 5 comercios, 2 cuentas y 4 condiciones; 0 bonos, canjes y sesiones. La clave del límite de consultas se llama `COUPON_LOOKUP_HMAC_KEY` y se guarda como secreta.
+- Vercel tiene configurada la región `dub1` (Dublín), cerca de la base en Irlanda. Las URLs Preview y Production apuntan al mismo proyecto Supabase; evitar pruebas que cambien datos desde Preview.
 
 ## Destino de los datos
 
@@ -41,7 +44,7 @@ Las tablas tendrán claves foráneas entre bonos, carreras y comercios; restricc
 ### 1. Preparar Git sin subir datos privados
 
 1. Usar el repositorio GitHub ya facilitado; está configurado como remoto y es público.
-2. Revisar la lista de archivos que entrarán en el primer commit antes de publicarlo.
+2. Revisar los archivos del primer commit antes de publicarlo; se excluyeron la base local, secretos y el GeoJSON original.
 3. Mantener fuera de Git `.data/`, `.env*`, copias SQLite/WAL, credenciales, exportaciones con datos personales y ficheros temporales.
 4. El repositorio facilitado es público: el generador determinista de contraseñas de comercios ya se ha retirado; no commitear ningún secreto ni copia de la base.
 5. Reducir el GeoJSON grande, hacer el build reproducible y guardar únicamente migraciones SQL, semillas de desarrollo no sensibles y código.
@@ -58,18 +61,18 @@ Las tablas tendrán claves foráneas entre bonos, carreras y comercios; restricc
 7. Mover el contador del buscador desde memoria local a almacenamiento compartido en Supabase; así no se puede eludir el límite al caer en otra instancia de Vercel.
 8. Usar el pooler de transacciones de Supabase para funciones serverless de Vercel; configurar SSL, pool pequeño y desactivar prepared statements en el cliente PostgreSQL. Supabase documenta estas limitaciones para el pooler de transacciones. [Conexión y pool de Supabase](https://supabase.com/docs/guides/database/connecting-to-postgres)
 
-### 3. Crear staging y migrar los datos
+### 3. Aplicar el esquema y migrar los datos
 
-1. Crear un proyecto Supabase de pruebas y desplegar el esquema exclusivamente mediante migraciones versionadas.
+1. Crear el proyecto Supabase y aplicar el esquema mediante la migración versionada. **Completado**.
 2. Parar las escrituras locales y generar una copia consistente de SQLite mediante la API de backup de SQLite (la base está en modo WAL; no copiar solo el `.sqlite` mientras la app esté activa).
-3. Importar las 3 configuraciones de carrera, los 5 comercios y las 2 cuentas. Mantener los identificadores para preservar relaciones. El importador aborta si el proyecto no está vacío y exige confirmación adicional para producción.
-4. No importar los 400 bonos, las 3 sesiones ni la caché de geocodificación. Comprobar que los contadores remotos son: 3 carreras, 5 comercios, 2 usuarios, 0 sesiones, 0 bonos y 0 canjes.
-5. El importador guarda contraseñas temporales bajo `.data/`, que está excluido de Git. No incluir hashes de contraseña ni exportaciones en Git.
+3. Importar las 3 configuraciones de carrera, los 5 comercios y las 2 cuentas. Mantener los identificadores para preservar relaciones. El importador aborta si el proyecto no está vacío y exige confirmación adicional para producción. **Completado**.
+4. No importar los 400 bonos, las 3 sesiones ni la caché de geocodificación. Se confirmó: 3 carreras, 5 comercios, 2 usuarios, 0 sesiones, 0 bonos y 0 canjes. **Completado**.
+5. Las contraseñas temporales quedaron bajo `.data/`, excluidas de Git. No incluir hashes de contraseña ni exportaciones en Git. **Completado**.
 
 ### 4. Conectar Vercel Preview y validar
 
-1. Conectar el repositorio a Vercel y desplegar primero una rama Preview. Vercel crea despliegues Preview para ramas no productivas y Production desde la rama configurada. [Despliegues Git de Vercel](https://vercel.com/docs/git)
-2. Configurar variables separadas para Development/Preview y Production. El servidor recibirá la URL de conexión de Supabase y `NEXT_PUBLIC_APP_URL`; secretos solo en los entornos de Vercel correspondientes. [Entornos de Vercel](https://vercel.com/docs/deployments/environments)
+1. El repositorio está conectado a Vercel. Se preparó `main` como rama de producción, pero primero debe existir en GitHub; después las demás ramas generarán Preview. [Despliegues Git de Vercel](https://vercel.com/docs/git)
+2. `DATABASE_URL` y `COUPON_LOOKUP_HMAC_KEY` están configuradas como variables sensibles en Preview y Production. `NEXT_PUBLIC_APP_URL` está configurada en Production. [Entornos de Vercel](https://vercel.com/docs/deployments/environments)
 3. Validar en Preview inicio/cierre de sesión, cambio/restablecimiento de contraseñas, gestión de comercios, edición de carreras, emisión completa, QR, consulta pública, límites, canjes parciales y exportaciones PDF/Excel.
 4. Verificar RLS, permisos de servidor, FK/cascadas y consistencia de saldos con operaciones concurrentes. Revisar logs sin registrar contraseñas, cookies, tokens ni códigos completos.
 
@@ -90,6 +93,6 @@ Las tablas tendrán claves foráneas entre bonos, carreras y comercios; restricc
 
 ## Requisitos de acceso para continuar
 
-No hacen falta contraseñas ni claves copiadas en el chat. El destino GitHub ya está definido. Para crear los proyectos falta identificar el equipo/cuenta de Vercel y la organización y región de Supabase, o confirmar que puedo elegirlos si ya tengo acceso a las cuentas. Después se autorizará la CLI de forma interactiva. El importador requiere `DATA_MIGRATION_TARGET=preview` o `production`; para producción también exige `CONFIRM_PRODUCTION_DATA_IMPORT=yes`. Las claves se cargarán directamente en los gestores de entorno, nunca en Git ni en este documento.
+No se incluyen contraseñas ni claves en este documento. El repositorio, Vercel y Supabase están enlazados/configurados. El importador requiere `DATA_MIGRATION_TARGET=preview` o `production`; para producción también exige `CONFIRM_PRODUCTION_DATA_IMPORT=yes`. Las claves se guardan localmente en `.data/` o directamente en los gestores de entorno, nunca en Git.
 
 Las migraciones SQL deben quedar versionadas y ser la única vía normal de cambio del esquema, como recomienda Supabase. [Flujo de migraciones Supabase](https://supabase.com/docs/guides/deployment/database-migrations)

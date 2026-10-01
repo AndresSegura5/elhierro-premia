@@ -24,8 +24,8 @@ function clientKey(headers: Pick<Headers, "get">) {
     || headers.get("cf-connecting-ip")?.trim()
     || forwarded
     || "unknown";
-  const secret = process.env.PUBLIC_LOOKUP_HMAC_KEY;
-  if (process.env.NODE_ENV === "production" && !secret) throw new Error("Falta configurar PUBLIC_LOOKUP_HMAC_KEY.");
+  const secret = process.env.COUPON_LOOKUP_HMAC_KEY;
+  if (process.env.NODE_ENV === "production" && !secret) throw new Error("Falta configurar COUPON_LOOKUP_HMAC_KEY.");
   return createHmac("sha256", secret ?? hashKey).update(address).digest("hex");
 }
 

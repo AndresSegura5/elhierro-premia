@@ -23,22 +23,22 @@ export default async function Home() {
         <div className="hero-inner">
           <div className="hero-kicker-spacer" aria-hidden="true" />
           <h1 className="hero-headline">
-            <span className="hero-kicker">{content.titleTop}</span>
+            <span className="hero-kicker">El Hierro</span>
             <span className="hero-ribbon-wrap">
               <span className="hero-ribbon" aria-hidden="true" />
-              <em>{content.titleHighlight}</em>
+              <em>premia</em>
             </span>
-            <span className="hero-subline">{content.titleBottom}</span>
+            <span className="hero-subline">a sus deportistas</span>
           </h1>
         </div>
         <PageTitleHero
           variant="home"
           headingLevel={2}
           description={content.offerDescription}
-          linkHref={content.linkUrl}
-          linkLabel={content.linkText}
+          linkHref="/bono"
+          linkLabel="Consulta tu bono"
         >
-          {content.offerLead} <em>{content.offerAmount}</em>
+          Bono de <em>30€</em>
         </PageTitleHero>
       </section>
       <main className="home-main">
