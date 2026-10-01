@@ -7,7 +7,11 @@ export function normalizeCouponCode(value: string) {
   }
 }
 
+export function isValidCouponCode(code: string) {
+  return /^EH-(BES|BIM|MER)-([A-HJ-KM-NP-Z][1-9][A-HJ-KM-NP-Z][1-9]{3}[A-HJ-KM-NP-Z]|[A-HJ-KM-NP-Z1-9]{12})$/.test(code);
+}
+
 export function couponCodeFromQr(value: string) {
   const code = normalizeCouponCode(value);
-  return code.length <= 128 && /^EH-[A-Z0-9]+(?:-[A-Z0-9]+)+$/.test(code) ? code : null;
+  return isValidCouponCode(code) ? code : null;
 }

@@ -81,19 +81,24 @@ export async function signIn(username: string, password: string, role: Role) {
 
 export async function signInDetailed(username: string, password: string, role: Role): Promise<SignInResult> {
   const normalized = username.trim().toLowerCase();
-  if (!normalized || !password || password.length > 200) return { success: false, reason: "invalid" };
+  if (!normalized || normalized.length > 254 || !password || password.length > 200) return { success: false, reason: "invalid" };
   const db = getDatabase();
   const user = role === "admin"
     ? db.prepare("SELECT * FROM users WHERE (username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE) AND role = 'admin'").get(normalized, normalized) as UserRow | undefined
     : db.prepare("SELECT * FROM users WHERE username = ? COLLATE NOCASE AND role = 'merchant'").get(normalized) as UserRow | undefined;
-  if (!user) return { success: false, reason: "invalid" };
+  if (!user) {
+    await passwordMatches(password, `scrypt:unknown-account:${"0".repeat(128)}`);
+    return { success: false, reason: "invalid" };
+  }
   if (user.locked_until && user.locked_until > new Date().toISOString()) return { success: false, reason: "locked" };
   const passwordIsValid = await passwordMatches(password, user.password_hash);
   if (!passwordIsValid) {
-    const attempts = user.failed_attempts + 1;
-    db.prepare("UPDATE users SET failed_attempts = ?, locked_until = ? WHERE id = ?")
-      .run(attempts >= 5 ? 0 : attempts, attempts >= 5 ? new Date(Date.now() + 15 * 60_000).toISOString() : null, user.id);
-    return { success: false, reason: attempts >= 5 ? "locked" : "invalid" };
+    const failure = db.prepare(`UPDATE users SET
+      failed_attempts = CASE WHEN failed_attempts >= 4 THEN 0 ELSE failed_attempts + 1 END,
+      locked_until = CASE WHEN locked_until > ? THEN locked_until WHEN failed_attempts >= 4 THEN ? ELSE NULL END
+      WHERE id = ? RETURNING locked_until`)
+      .get(new Date().toISOString(), new Date(Date.now() + 15 * 60_000).toISOString(), user.id) as { locked_until: string | null };
+    return { success: false, reason: failure.locked_until ? "locked" : "invalid" };
   }
   if (role === "merchant" && (!user.business_id || !isBusinessActive(user.business_id))) return { success: false, reason: "unavailable" };
   const jar = await cookies();
@@ -123,7 +128,7 @@ export async function signInDetailed(username: string, password: string, role: R
 
 export async function getSession(): Promise<SessionUser | null> {
   const token = (await cookies()).get(COOKIE)?.value;
-  if (!token) return null;
+  if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const row = getDatabase().prepare(`
     SELECT u.id, u.username, u.role, u.business_id,
       u.first_name, u.last_name, u.email, u.must_change_password

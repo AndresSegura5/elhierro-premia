@@ -1,4 +1,4 @@
-import { randomInt } from "node:crypto";
+import { generateCouponCode } from "./coupon-token";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -28,14 +28,6 @@ type BusinessRow = {
 
 let database: DatabaseSync | undefined;
 
-const COUPON_LETTERS = "ABCDEFGHJKMNPQRSTUVWXYZ";
-const COUPON_DIGITS = "123456789";
-
-function generateCouponCode(prefix: string) {
-  const letter = () => COUPON_LETTERS[randomInt(COUPON_LETTERS.length)];
-  const digit = () => COUPON_DIGITS[randomInt(COUPON_DIGITS.length)];
-  return `EH-${prefix}-${letter()}${digit()}${letter()}${digit()}${digit()}${digit()}${letter()}`;
-}
 
 function migrateLegacyCouponCodes(db: DatabaseSync) {
   const legacyFormat = /^EH-(BES|BIM|MER)-[A-HJ-KM-NP-Z][1-9][A-HJ-KM-NP-Z][1-9]{2}$/i;
@@ -148,6 +140,9 @@ export function getDatabase() {
     CREATE INDEX IF NOT EXISTS sessions_user_id ON sessions(user_id);
   `);
   const raceColumns = db.prepare("PRAGMA table_info(races)").all() as Array<{ name: string }>;
+  const redemptionColumns = db.prepare("PRAGMA table_info(redemptions)").all() as Array<{ name: string }>;
+  if (!redemptionColumns.some((column) => column.name === "idempotency_key")) db.exec("ALTER TABLE redemptions ADD COLUMN idempotency_key TEXT");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS redemptions_idempotency ON redemptions(business_id, idempotency_key) WHERE idempotency_key IS NOT NULL");
   const couponColumns = db.prepare("PRAGMA table_info(coupons)").all() as Array<{ name: string }>;
   if (raceColumns.some((column) => column.name === "participants")) {
     db.exec("ALTER TABLE races RENAME COLUMN participants TO coupon_quantity");
@@ -386,7 +381,7 @@ export function deleteRaceCoupons(raceId: string) {
   }
 }
 
-export function redeemCoupon(code: string, businessId: string, amountCents: number, now = new Date()) {
+export function redeemCoupon(code: string, businessId: string, amountCents: number, now = new Date(), idempotencyKey?: string) {
   const db = getDatabase();
   if (!Number.isSafeInteger(amountCents) || amountCents <= 0) throw new Error("Introduce un importe mayor que cero.");
   db.exec("BEGIN IMMEDIATE");
@@ -394,6 +389,15 @@ export function redeemCoupon(code: string, businessId: string, amountCents: numb
     const row = db.prepare("SELECT * FROM coupons WHERE code = ? COLLATE NOCASE").get(code.trim()) as CouponRow | undefined;
     if (!row) throw new Error("Bono no encontrado.");
     if (row.business_id !== businessId) throw new Error("Este bono pertenece a otro comercio.");
+    if (!isBusinessActive(businessId)) throw new Error("El comercio no está activo.");
+    if (idempotencyKey) {
+      const previous = db.prepare("SELECT code, amount_cents FROM redemptions WHERE business_id = ? AND idempotency_key = ?").get(businessId, idempotencyKey) as { code: string; amount_cents: number } | undefined;
+      if (previous) {
+        if (previous.code !== row.code || previous.amount_cents !== amountCents) throw new Error("La operación ya se utilizó con otros datos.");
+        db.exec("COMMIT");
+        return getCouponDetails(row.code)!;
+      }
+    }
     const race = getRace(row.race_id);
     if (!race) throw new Error("Carrera no reconocida.");
     const status = couponStatus(race.startDate, race.validityDays, row.amount_cents, row.used_cents, todayInCanary(now));
@@ -404,8 +408,8 @@ export function redeemCoupon(code: string, businessId: string, amountCents: numb
     if (amountCents > balance) throw new Error("El importe supera el saldo disponible.");
     const newBalance = balance - amountCents;
     db.prepare("UPDATE coupons SET used_cents = used_cents + ? WHERE code = ?").run(amountCents, row.code);
-    db.prepare("INSERT INTO redemptions (code, business_id, amount_cents, balance_after_cents, created_at) VALUES (?, ?, ?, ?, ?)")
-      .run(row.code, businessId, amountCents, newBalance, now.toISOString());
+    db.prepare("INSERT INTO redemptions (code, business_id, amount_cents, balance_after_cents, created_at, idempotency_key) VALUES (?, ?, ?, ?, ?, ?)")
+      .run(row.code, businessId, amountCents, newBalance, now.toISOString(), idempotencyKey ?? null);
     db.exec("COMMIT");
     return getCouponDetails(row.code)!;
   } catch (error) {

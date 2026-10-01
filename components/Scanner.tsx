@@ -30,6 +30,8 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lastScan = useRef("");
+  const purchaseAttempt = useRef<{ code: string; amount: string; key: string } | null>(null);
+  const submitting = useRef(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [manualCode, setManualCode] = useState("");
   const [amount, setAmount] = useState("");
@@ -128,25 +130,31 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
 
   async function registerExpense(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!result) return;
+    if (!result || submitting.current) return;
+    submitting.current = true;
+    if (!purchaseAttempt.current || purchaseAttempt.current.code !== result.coupon.code || purchaseAttempt.current.amount !== amount) {
+      purchaseAttempt.current = { code: result.coupon.code, amount, key: crypto.randomUUID() };
+    }
     setBusy(true);
     setError("");
     setNotice("");
     try {
       const response = await fetch(`/api/bonos/${encodeURIComponent(result.coupon.code)}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Idempotency-Key": purchaseAttempt.current.key },
         body: JSON.stringify({ amount }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "No se pudo registrar el gasto.");
       setResult(data as Lookup);
+      purchaseAttempt.current = null;
       setAmount("");
       setNotice("Gasto registrado. El saldo ya está actualizado.");
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "No se pudo registrar el gasto.");
     } finally {
+      submitting.current = false;
       setBusy(false);
     }
   }

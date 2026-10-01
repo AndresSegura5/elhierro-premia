@@ -104,22 +104,25 @@ export async function signIn(username: string, password: string, role: Role) {
 export async function signInDetailed(username: string, password: string, role: Role): Promise<SignInResult> {
   if (!hasPostgresDatabase()) return sqliteAuth.signInDetailed(username, password, role);
   const normalized = username.trim().toLowerCase();
-  if (!normalized || !password || password.length > 200) return { success: false, reason: "invalid" };
+  if (!normalized || normalized.length > 254 || !password || password.length > 200) return { success: false, reason: "invalid" };
   const sql = getPostgres();
   const rows = role === "admin"
     ? await sql<UserRow[]>`SELECT * FROM public.users WHERE (lower(username) = ${normalized} OR lower(email) = ${normalized}) AND role = 'admin'`
     : await sql<UserRow[]>`SELECT * FROM public.users WHERE lower(username) = ${normalized} AND role = 'merchant'`;
   const user = rows[0];
-  if (!user) return { success: false, reason: "invalid" };
+  if (!user) {
+    await passwordMatches(password, `scrypt:unknown-account:${"0".repeat(128)}`);
+    return { success: false, reason: "invalid" };
+  }
   if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) return { success: false, reason: "locked" };
   if (!(await passwordMatches(password, user.password_hash))) {
-    await sql`
+    const [failure] = await sql`
       UPDATE public.users
       SET failed_attempts = CASE WHEN failed_attempts >= 4 THEN 0 ELSE failed_attempts + 1 END,
-          locked_until = CASE WHEN failed_attempts >= 4 THEN now() + interval '15 minutes' ELSE NULL END
-      WHERE id = ${user.id}
+          locked_until = CASE WHEN locked_until > now() THEN locked_until WHEN failed_attempts >= 4 THEN now() + interval '15 minutes' ELSE NULL END
+      WHERE id = ${user.id} RETURNING locked_until
     `;
-    return { success: false, reason: user.failed_attempts >= 4 ? "locked" : "invalid" };
+    return { success: false, reason: failure?.locked_until ? "locked" : "invalid" };
   }
   if (role === "merchant" && (!user.business_id || !(await isBusinessActive(user.business_id)))) return { success: false, reason: "unavailable" };
 
@@ -145,7 +148,7 @@ export async function signInDetailed(username: string, password: string, role: R
 export async function getSession(): Promise<SessionUser | null> {
   if (!hasPostgresDatabase()) return sqliteAuth.getSession();
   const token = (await cookies()).get(COOKIE)?.value;
-  if (!token) return null;
+  if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const [row] = await getPostgres()<UserRow[]>`
     SELECT u.id, u.username, u.role, u.business_id,
       u.first_name, u.last_name, u.email, u.must_change_password

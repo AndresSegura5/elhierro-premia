@@ -41,9 +41,9 @@ function fixture(postgres) {
   const values = new Map();
   const jar = { get: (name) => values.has(name) ? { value: values.get(name) } : undefined, set: (name, value) => values.set(name, value), delete: (name) => values.delete(name) };
   const sql = async (strings, ...parameters) => {
-    const query = strings.join("?").replaceAll("public.", "").replaceAll("now()", `'${new Date().toISOString()}'`);
+    const query = strings.join("?").replaceAll("public.", "").replaceAll("now() + interval '15 minutes'", `'${new Date(Date.now() + 900000).toISOString()}'`).replaceAll("now()", `'${new Date().toISOString()}'`);
     const statement = db.prepare(query);
-    if (/^\s*SELECT/i.test(query)) return statement.all(...parameters).map(row => postgres && "must_change_password" in row ? { ...row, must_change_password: !!row.must_change_password } : row);
+    if (/^\s*SELECT/i.test(query) || /RETURNING/i.test(query)) return statement.all(...parameters).map(row => postgres && "must_change_password" in row ? { ...row, must_change_password: !!row.must_change_password } : row);
     statement.run(...parameters);
     return [];
   };
@@ -57,6 +57,18 @@ function fixture(postgres) {
 
 for (const backend of ["auth-sqlite", "auth"]) {
   const auth = await loadAuth(backend);
+  test(`${backend}: five concurrent password failures lock the account`, async () => {
+    const state = fixture(backend === "auth");
+    globalThis.__authSessionFixture = state;
+    try {
+      const results = await Promise.all(Array.from({ length: 5 }, () => auth.signInDetailed("tienda-los-mocanes", "wrong-password", "merchant")));
+      assert.ok(results.every(result => !result.success));
+      const row = state.db.prepare("SELECT locked_until FROM users WHERE id = 2").get();
+      assert.ok(new Date(row.locked_until).getTime() > Date.now());
+      assert.deepEqual(await auth.signInDetailed("tienda-los-mocanes", state.password, "merchant"), { success: false, reason: "locked" });
+      assert.equal(state.db.prepare("SELECT count(*) AS total FROM sessions").get().total, 0);
+    } finally { state.db.close(); }
+  });
   test(`${backend}: admin and merchant logins are exclusive and enforce roles`, async () => {
     const state = fixture(backend === "auth");
     globalThis.__authSessionFixture = state;

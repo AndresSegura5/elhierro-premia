@@ -5,13 +5,15 @@ import { CalendarClock, MapPin, Phone, Trophy } from "lucide-react";
 import { InteractiveTable, type InteractiveTableColumn, type InteractiveTableRow } from "@/components/InteractiveTable";
 import { QRCodeCard } from "@/components/QRCodeCard";
 import { Header } from "@/components/Header";
-import { consumePublicCouponLookup } from "@/lib/coupon-lookup-limit";
+import { consumeAuthenticatedCouponLookup, consumePublicCouponLookup } from "@/lib/coupon-lookup-limit";
+import { isValidCouponCode } from "@/lib/coupon-code";
 import { getSession } from "@/lib/auth";
 import { localPhoneNumber, phoneLink } from "@/lib/phone";
 import { formatDate, formatDateTime, formatEuros } from "@/lib/bonos";
 import { getBusinessRecord, getCouponDetails, listCouponRules } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
+export const metadata = { robots: { index: false, follow: false } };
 
 const statusLabels = {
   "not-started": "Aún no vigente",
@@ -27,8 +29,8 @@ type Props = {
 
 export default async function CouponPage({ params }: Props) {
   const session = await getSession();
-  if (!session) {
-    const limit = await consumePublicCouponLookup(await headers());
+  {
+    const limit = session ? await consumeAuthenticatedCouponLookup(session.id) : await consumePublicCouponLookup(await headers());
     if (!limit.allowed) {
       const waitMinutes = Math.ceil(limit.retryAfterSeconds / 60);
       return <>
@@ -44,8 +46,10 @@ export default async function CouponPage({ params }: Props) {
     }
   }
   const { code } = await params;
+  if (!isValidCouponCode(code.trim().toUpperCase())) notFound();
   const details = await getCouponDetails(code);
   if (!details) notFound();
+  if (session?.role === "merchant" && details.coupon.businessId !== session.businessId) notFound();
   const { coupon, race, redemptions } = details;
   const business = await getBusinessRecord(coupon.businessId);
   const couponRules = await listCouponRules();

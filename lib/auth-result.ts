@@ -4,7 +4,8 @@ export type SignInResult =
 
 export function signInError(result: SignInResult) {
   if (result.success) return "";
-  if (result.reason === "locked") return "El acceso está bloqueado temporalmente por varios intentos fallidos. Espera 15 minutos desde el último bloqueo y vuelve a intentarlo.";
   if (result.reason === "unavailable") return "El acceso de este comercio no está activo. Contacta con la organización.";
-  return "Usuario o contraseña incorrectos.";
+  // Do not expose whether an account exists by distinguishing wrong credentials
+  // from an account lock. Request limits provide the visible waiting message.
+  return "No se pudo iniciar sesión. Comprueba el usuario y la contraseña o inténtalo más tarde.";
 }

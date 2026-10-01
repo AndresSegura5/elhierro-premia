@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomInt } from "node:crypto";
+import { generateCouponCode } from "./coupon-token";
 import * as sqliteStore from "./store-sqlite";
 import { hasPostgresDatabase, getPostgres } from "./postgres";
 import { addDays, BONO_CENTS, couponStatus, todayInCanary } from "./bonos";
@@ -41,14 +41,6 @@ type BusinessRecord = {
 type CouponRecord = { code: string; race_id: string; business_id: string; amount_cents: number; used_cents: number };
 type RedemptionRecord = { id: number; code: string; business_id: string; amount_cents: number; balance_after_cents: number; created_at: string | Date };
 
-const COUPON_LETTERS = "ABCDEFGHJKMNPQRSTUVWXYZ";
-const COUPON_DIGITS = "123456789";
-
-function generateCouponCode(prefix: string) {
-  const letter = () => COUPON_LETTERS[randomInt(COUPON_LETTERS.length)];
-  const digit = () => COUPON_DIGITS[randomInt(COUPON_DIGITS.length)];
-  return `EH-${prefix}-${letter()}${digit()}${letter()}${digit()}${digit()}${digit()}${letter()}`;
-}
 
 function dateString(value: string | Date) {
   return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
@@ -342,8 +334,8 @@ export async function deleteRaceCoupons(raceId: string) {
   });
 }
 
-export async function redeemCoupon(code: string, businessId: string, amountCents: number, now = new Date()) {
-  if (!hasPostgresDatabase()) return sqliteStore.redeemCoupon(code, businessId, amountCents, now);
+export async function redeemCoupon(code: string, businessId: string, amountCents: number, now = new Date(), idempotencyKey?: string) {
+  if (!hasPostgresDatabase()) return sqliteStore.redeemCoupon(code, businessId, amountCents, now, idempotencyKey);
   if (!Number.isSafeInteger(amountCents) || amountCents <= 0) throw new Error("Introduce un importe mayor que cero.");
   const normalized = code.trim().toUpperCase();
   const sql = getPostgres();
@@ -354,6 +346,15 @@ export async function redeemCoupon(code: string, businessId: string, amountCents
     `;
     if (!row) throw new Error("Bono no encontrado.");
     if (row.business_id !== businessId) throw new Error("Este bono pertenece a otro comercio.");
+    const [business] = await tx`SELECT active FROM public.businesses WHERE id = ${businessId} FOR SHARE`;
+    if (business?.active !== true) throw new Error("El comercio no está activo.");
+    if (idempotencyKey) {
+      const [previous] = await tx`SELECT code, amount_cents FROM public.redemptions WHERE business_id = ${businessId} AND idempotency_key = ${idempotencyKey}`;
+      if (previous) {
+        if (previous.code !== normalized || Number(previous.amount_cents) !== amountCents) throw new Error("La operación ya se utilizó con otros datos.");
+        return;
+      }
+    }
     const startDate = dateString(row.start_date);
     const status = couponStatus(startDate, Number(row.validity_days), Number(row.amount_cents), Number(row.used_cents), todayInCanary(now));
     if (status === "not-started") throw new Error("Este bono aún no está vigente.");
@@ -363,8 +364,8 @@ export async function redeemCoupon(code: string, businessId: string, amountCents
     if (amountCents > balance) throw new Error("El importe supera el saldo disponible.");
     const newBalance = balance - amountCents;
     await tx`UPDATE public.coupons SET used_cents = used_cents + ${amountCents} WHERE code = ${normalized}`;
-    await tx`INSERT INTO public.redemptions (code, business_id, amount_cents, balance_after_cents, created_at)
-      VALUES (${normalized}, ${businessId}, ${amountCents}, ${newBalance}, ${now.toISOString()})`;
+    await tx`INSERT INTO public.redemptions (code, business_id, amount_cents, balance_after_cents, created_at, idempotency_key)
+      VALUES (${normalized}, ${businessId}, ${amountCents}, ${newBalance}, ${now.toISOString()}, ${idempotencyKey ?? null})`;
   });
   return getCouponDetails(normalized);
 }

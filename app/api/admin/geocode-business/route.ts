@@ -2,10 +2,12 @@ import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { locateBusinessAddress } from "@/lib/geocoding";
 import type { Municipality } from "@/lib/types";
+import { isSameOriginMutation } from "@/lib/request-security";
 
 const municipalities: Municipality[] = ["Valverde", "La Frontera", "El Pinar"];
 
 export async function POST(request: Request) {
+  if (!isSameOriginMutation(request)) return NextResponse.json({ error: "Solicitud no autorizada." }, { status: 403 });
   const session = await getSession();
   if (session?.role !== "admin" || session.mustChangePassword) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
 
