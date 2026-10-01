@@ -16,7 +16,14 @@
   --button-height: 44px;
   --shadow: none;
   --background-motifs: url("/branding/background-motifs.svg");
+  --background-motifs-light: url("/branding/background-motifs-light.svg");
   --map-water: #071626;
+}
+@media (max-width: 760px) {
+  :root {
+    --background-motifs: none;
+    --background-motifs-light: none;
+  }
 }
 * {
   box-sizing: border-box;
@@ -3734,7 +3741,7 @@ td a {
 }
 .bono-main > .page-title-hero {
   background-color: #071626;
-  background-image: url("/branding/background-motifs-light.svg");
+  background-image: var(--background-motifs-light);
   background-position: 50% -18px;
   background-repeat: repeat;
   background-size: 1600px 900px;
@@ -3812,7 +3819,7 @@ td a {
   z-index: -1;
   inset: 0 0 92px;
   background-color: #071626;
-  background-image: url("/branding/background-motifs-light.svg");
+  background-image: var(--background-motifs-light);
   background-position: 50% -163px;
   background-repeat: repeat;
   background-size: 1600px 900px;
