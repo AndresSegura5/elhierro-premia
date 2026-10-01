@@ -9,6 +9,7 @@ import * as sqliteAuth from "./auth-sqlite";
 import { hasPostgresDatabase, getPostgres } from "./postgres";
 import { getBusinessRecord, isBusinessActive, makeBusinessId } from "./store";
 import { initialBusinessUsername } from "./business-credentials";
+import type { SignInResult } from "./auth-result";
 
 const scrypt = promisify(scryptCallback);
 const COOKIE = "bonos_session";
@@ -97,15 +98,20 @@ export async function createFirstAdmin(username: string, password: string) {
 }
 
 export async function signIn(username: string, password: string, role: Role) {
-  if (!hasPostgresDatabase()) return sqliteAuth.signIn(username, password, role);
+  return (await signInDetailed(username, password, role)).success;
+}
+
+export async function signInDetailed(username: string, password: string, role: Role): Promise<SignInResult> {
+  if (!hasPostgresDatabase()) return sqliteAuth.signInDetailed(username, password, role);
   const normalized = username.trim().toLowerCase();
-  if (!normalized || !password || password.length > 200) return false;
+  if (!normalized || !password || password.length > 200) return { success: false, reason: "invalid" };
   const sql = getPostgres();
   const rows = role === "admin"
     ? await sql<UserRow[]>`SELECT * FROM public.users WHERE (lower(username) = ${normalized} OR lower(email) = ${normalized}) AND role = 'admin'`
     : await sql<UserRow[]>`SELECT * FROM public.users WHERE lower(username) = ${normalized} AND role = 'merchant'`;
   const user = rows[0];
-  if (!user || (user.locked_until && new Date(user.locked_until).getTime() > Date.now())) return false;
+  if (!user) return { success: false, reason: "invalid" };
+  if (user.locked_until && new Date(user.locked_until).getTime() > Date.now()) return { success: false, reason: "locked" };
   if (!(await passwordMatches(password, user.password_hash))) {
     await sql`
       UPDATE public.users
@@ -113,9 +119,9 @@ export async function signIn(username: string, password: string, role: Role) {
           locked_until = CASE WHEN failed_attempts >= 4 THEN now() + interval '15 minutes' ELSE NULL END
       WHERE id = ${user.id}
     `;
-    return false;
+    return { success: false, reason: user.failed_attempts >= 4 ? "locked" : "invalid" };
   }
-  if (role === "merchant" && (!user.business_id || !(await isBusinessActive(user.business_id)))) return false;
+  if (role === "merchant" && (!user.business_id || !(await isBusinessActive(user.business_id)))) return { success: false, reason: "unavailable" };
 
   const jar = await cookies();
   const previousToken = jar.get(COOKIE)?.value;
@@ -133,7 +139,7 @@ export async function signIn(username: string, password: string, role: Role) {
     path: "/",
     expires,
   });
-  return true;
+  return { success: true };
 }
 
 export async function getSession(): Promise<SessionUser | null> {

@@ -6,6 +6,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Business } from "./types";
 import { initialBusinessUsername } from "./business-credentials";
+import type { SignInResult } from "./auth-result";
 import { demoWritesEnabled, getBusinessRecord, getDatabase, isBusinessActive, makeBusinessId } from "./store-sqlite";
 
 const scrypt = promisify(scryptCallback);
@@ -75,21 +76,26 @@ export async function createFirstAdmin(username: string, password: string) {
 }
 
 export async function signIn(username: string, password: string, role: Role) {
+  return (await signInDetailed(username, password, role)).success;
+}
+
+export async function signInDetailed(username: string, password: string, role: Role): Promise<SignInResult> {
   const normalized = username.trim().toLowerCase();
-  if (!normalized || !password || password.length > 200) return false;
+  if (!normalized || !password || password.length > 200) return { success: false, reason: "invalid" };
   const db = getDatabase();
   const user = role === "admin"
     ? db.prepare("SELECT * FROM users WHERE (username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE) AND role = 'admin'").get(normalized, normalized) as UserRow | undefined
     : db.prepare("SELECT * FROM users WHERE username = ? COLLATE NOCASE AND role = 'merchant'").get(normalized) as UserRow | undefined;
-  if (!user || (user.locked_until && user.locked_until > new Date().toISOString())) return false;
+  if (!user) return { success: false, reason: "invalid" };
+  if (user.locked_until && user.locked_until > new Date().toISOString()) return { success: false, reason: "locked" };
   const passwordIsValid = await passwordMatches(password, user.password_hash);
   if (!passwordIsValid) {
     const attempts = user.failed_attempts + 1;
     db.prepare("UPDATE users SET failed_attempts = ?, locked_until = ? WHERE id = ?")
       .run(attempts >= 5 ? 0 : attempts, attempts >= 5 ? new Date(Date.now() + 15 * 60_000).toISOString() : null, user.id);
-    return false;
+    return { success: false, reason: attempts >= 5 ? "locked" : "invalid" };
   }
-  if (role === "merchant" && (!user.business_id || !isBusinessActive(user.business_id))) return false;
+  if (role === "merchant" && (!user.business_id || !isBusinessActive(user.business_id))) return { success: false, reason: "unavailable" };
   const jar = await cookies();
   const previousToken = jar.get(COOKIE)?.value;
   const token = randomBytes(32).toString("base64url");
@@ -112,7 +118,7 @@ export async function signIn(username: string, password: string, role: Role) {
     path: "/",
     expires,
   });
-  return true;
+  return { success: true };
 }
 
 export async function getSession(): Promise<SessionUser | null> {

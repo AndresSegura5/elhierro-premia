@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { adminExists, createFirstAdmin, getSession, provisionMerchant, requireAdmin, signIn, signOut } from "@/lib/auth";
+import { adminExists, createFirstAdmin, getSession, provisionMerchant, requireAdmin, signInDetailed, signOut } from "@/lib/auth";
+import { signInError } from "@/lib/auth-result";
 import { demoWritesEnabled } from "@/lib/store";
 
 export type AuthState = { error: string };
@@ -18,15 +19,15 @@ export async function setupAdmin(_state: AuthState, formData: FormData): Promise
 
 export async function loginAdmin(_state: AuthState, formData: FormData): Promise<AuthState> {
   if (!(await adminExists())) return { error: "La cuenta de administración aún no está configurada." };
-  const success = await signIn(String(formData.get("username") ?? ""), String(formData.get("password") ?? ""), "admin");
-  if (!success) return { error: "Usuario o contraseña incorrectos. Tras varios intentos, espera 15 minutos." };
+  const result = await signInDetailed(String(formData.get("username") ?? ""), String(formData.get("password") ?? ""), "admin");
+  if (!result.success) return { error: signInError(result) };
   if ((await getSession())?.mustChangePassword) redirect("/admin/primer-acceso");
   redirect("/admin/carreras");
 }
 
 export async function loginMerchant(_state: AuthState, formData: FormData): Promise<AuthState> {
-  const success = await signIn(String(formData.get("username") ?? ""), String(formData.get("password") ?? ""), "merchant");
-  if (!success) return { error: "Usuario o contraseña incorrectos. Tras varios intentos, espera 15 minutos." };
+  const result = await signInDetailed(String(formData.get("username") ?? ""), String(formData.get("password") ?? ""), "merchant");
+  if (!result.success) return { error: signInError(result) };
   redirect("/comercio");
 }
 
