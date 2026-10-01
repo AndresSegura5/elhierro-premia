@@ -143,7 +143,7 @@ export default async function AdminPage({ searchParams }: {
                   </form>
                 </div>
               </div>
-              <p className="admin-settings-note">Los bonos se emiten sin dorsal asignado y pueden entregarse en cualquier orden. Cada bono sí queda ligado a un comercio. La asignación utiliza por ahora el listado provisional de negocios.</p>
+              <p className="admin-settings-note">Los bonos se emiten sin dorsal asignado y pueden entregarse en cualquier orden. Cada bono queda ligado a un comercio activo. El sistema prioriza el que tenga menos bonos de esa carrera y desempata por orden alfabético.</p>
               </section>
             </details>
 

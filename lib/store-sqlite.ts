@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { addDays, BONO_CENTS, couponStatus, todayInCanary } from "./bonos";
+import { chooseLeastAssignedBusiness } from "./coupon-assignment";
 import { businesses, raceDefaults } from "./data";
 import type { Business, Coupon, ManagedBusiness, Municipality, Race, Redemption } from "./types";
 
@@ -345,10 +346,17 @@ export function issueMissingCoupons(raceId: string) {
     const race = getRace(raceId);
     if (!race) throw new Error("Carrera no reconocida.");
     const count = (db.prepare("SELECT COUNT(*) AS total FROM coupons WHERE race_id = ?").get(raceId) as { total: number }).total;
+    const existingAssignments = db.prepare("SELECT business_id, COUNT(*) AS total FROM coupons WHERE race_id = ? GROUP BY business_id").all(raceId) as Array<{ business_id: string; total: number }>;
+    const assignedCoupons = new Map(currentBusinesses.map(({ id }) => [id, 0]));
+    for (const assignment of existingAssignments) {
+      if (assignedCoupons.has(assignment.business_id)) assignedCoupons.set(assignment.business_id, Number(assignment.total));
+    }
     const insert = db.prepare("INSERT INTO coupons (code, race_id, business_id, amount_cents) VALUES (?, ?, ?, ?)");
     for (let serial = count + 1; serial <= race.couponQuantity; serial++) {
+      const business = chooseLeastAssignedBusiness(currentBusinesses, assignedCoupons);
       const code = generateUniqueCouponCode(prefix);
-      insert.run(code, raceId, currentBusinesses[(serial - 1) % currentBusinesses.length].id, BONO_CENTS);
+      insert.run(code, raceId, business.id, BONO_CENTS);
+      assignedCoupons.set(business.id, (assignedCoupons.get(business.id) ?? 0) + 1);
     }
     db.exec("COMMIT");
     return race.couponQuantity - count;

@@ -4,17 +4,14 @@ import { CommerceSection } from "@/components/CommerceSection";
 import { Header } from "@/components/Header";
 import { PageTitleHero } from "@/components/PageTitleHero";
 import { QRPattern } from "@/components/QRPattern";
-import { siteContentDefaults } from "@/lib/data";
-import { getSiteContent, listBusinesses, listRaces } from "@/lib/store";
+import { listBusinesses, listRaces } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 export default async function Home() {
-  const [races, businesses, hero] = await Promise.all([
+  const [races, businesses] = await Promise.all([
     listRaces(),
     listBusinesses(),
-    getSiteContent<typeof siteContentDefaults["home.hero"]>("home.hero"),
   ]);
-  const content = hero ?? siteContentDefaults["home.hero"];
   return (
     <>
       <Header />
@@ -23,23 +20,22 @@ export default async function Home() {
         <div className="hero-inner">
           <div className="hero-kicker-spacer" aria-hidden="true" />
           <h1 className="hero-headline">
-            <span className="hero-kicker">El Hierro</span>
+            <span className="hero-kicker">Ganamos</span>
             <span className="hero-ribbon-wrap">
               <span className="hero-ribbon" aria-hidden="true" />
-              <em>premia</em>
+              <em>todos</em>
             </span>
-            <span className="hero-subline">a sus deportistas</span>
+            <span className="hero-subline">Deporte y comercio</span>
           </h1>
+          <PageTitleHero
+            variant="home"
+            headingLevel={2}
+            linkHref="/bono"
+            linkLabel="Consulta tu bono"
+          >
+            Bono de <em>30€</em>
+          </PageTitleHero>
         </div>
-        <PageTitleHero
-          variant="home"
-          headingLevel={2}
-          description={content.offerDescription}
-          linkHref="/bono"
-          linkLabel="Consulta tu bono"
-        >
-          Bono de <em>30€</em>
-        </PageTitleHero>
       </section>
       <main className="home-main">
         <div className="home-inner">

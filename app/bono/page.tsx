@@ -4,7 +4,6 @@ import { BonoLookupInline } from "@/components/BonoLookupInline";
 import { Header } from "@/components/Header";
 import { PageTitleHero } from "@/components/PageTitleHero";
 import { siteContentDefaults } from "@/lib/data";
-import { formatDate } from "@/lib/bonos";
 import { getSiteContent, listRaces } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -56,10 +55,6 @@ export default async function BonoPage() {
                 <div className="bono-race-card-body">
                   <strong>{race.name}</strong>
                   <p>{race.description}</p>
-                  <div className="bono-race-card-meta">
-                    <span>Inicio: {formatDate(race.startDate)}</span>
-                    <span className="bono-race-pill">Válido {race.validityDays} días</span>
-                  </div>
                 </div>
                 <img className="bono-race-logo" src={race.logoPath} alt="" />
               </article>

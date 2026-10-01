@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Camera, CameraOff, CheckCircle2, Keyboard, ScanLine, Wallet } from "lucide-react";
 import { formatDate, formatDateTime, formatEuros } from "@/lib/bonos";
 import type { Coupon, Redemption } from "@/lib/types";
+import { normalizeCouponCode } from "@/lib/coupon-code";
 
 type Lookup = {
   coupon: Coupon;
@@ -15,15 +16,6 @@ type Lookup = {
 
 type BarcodeDetectorShape = { detect(source: CanvasImageSource): Promise<Array<{ rawValue?: string }>> };
 type BarcodeDetectorConstructor = new (options: { formats: string[] }) => BarcodeDetectorShape;
-
-function normalizeCode(value: string) {
-  const urlCode = value.match(/\/bono\/([^/?#]+)/i)?.[1];
-  try {
-    return decodeURIComponent(urlCode ?? value).trim().toUpperCase();
-  } catch {
-    return value.trim().toUpperCase();
-  }
-}
 
 const statusLabels = {
   "not-started": "Aún no vigente",
@@ -47,7 +39,7 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
   const [busy, setBusy] = useState(false);
 
   const lookup = useCallback(async (value: string) => {
-    const code = normalizeCode(value);
+    const code = normalizeCouponCode(value);
     setResult(null);
     setError("");
     setNotice("");

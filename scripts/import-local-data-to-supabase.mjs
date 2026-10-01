@@ -5,6 +5,7 @@ import { resolve } from "node:path";
 import postgres from "postgres";
 import { businessCategories } from "../lib/business-categories.ts";
 import { couponRules, raceDefaults, siteContentDefaults } from "../lib/data.ts";
+import { legalContentDefaults } from "../lib/legal-content.ts";
 
 const target = process.env.DATA_MIGRATION_TARGET;
 if (target !== "preview" && target !== "production") {
@@ -38,7 +39,7 @@ try {
   const races = source.prepare("SELECT id, coupon_quantity, start_date, validity_days FROM races ORDER BY id").all();
   const businesses = source.prepare("SELECT * FROM businesses ORDER BY id").all();
   const users = source.prepare(`
-    SELECT id, username, password_hash, role, business_id, demo_business_id,
+    SELECT id, username, password_hash, role, business_id,
       first_name, last_name, email, must_change_password
     FROM users ORDER BY id
   `).all();
@@ -98,7 +99,7 @@ try {
     for (const [index, name] of categories.entries()) {
       await tx`INSERT INTO public.business_categories (name, sort_order) VALUES (${name}, ${index})`;
     }
-    for (const [key, content] of Object.entries(siteContentDefaults)) {
+    for (const [key, content] of Object.entries({ ...siteContentDefaults, ...legalContentDefaults })) {
       await tx`INSERT INTO public.site_content (content_key, content) VALUES (${key}, ${tx.json(content)})`;
     }
     for (const row of races) {
@@ -131,10 +132,10 @@ try {
     for (const user of preparedUsers) {
       await tx`
         INSERT INTO public.users (
-          id, username, password_hash, role, business_id, demo_business_id,
+          id, username, password_hash, role, business_id,
           failed_attempts, locked_until, first_name, last_name, email, must_change_password
         ) VALUES (
-          ${user.id}, ${user.username}, ${user.password_hash}, ${user.role}, ${user.business_id}, ${user.demo_business_id},
+          ${user.id}, ${user.username}, ${user.password_hash}, ${user.role}, ${user.business_id},
           0, NULL, ${user.first_name}, ${user.last_name}, ${user.email}, ${user.must_change_password}
         )
       `;

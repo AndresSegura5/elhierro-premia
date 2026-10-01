@@ -35,6 +35,7 @@ export async function GET(request: Request, { params }: Context) {
 export async function POST(request: Request, { params }: Context) {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "Inicia sesión como comercio para registrar gastos." }, { status: 401 });
+  if (session.role !== "merchant") return NextResponse.json({ error: "Inicia sesión como comercio para registrar gastos." }, { status: 403 });
   if (!session.businessId) return NextResponse.json({ error: "Esta cuenta no tiene un comercio asignado." }, { status: 403 });
   if (!demoWritesEnabled()) return NextResponse.json({ error: "El registro de canjes requiere una base de datos persistente de producción." }, { status: 403 });
   const { code } = await params;

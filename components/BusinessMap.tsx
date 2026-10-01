@@ -75,6 +75,7 @@ export function BusinessMap({ businesses, selectedId, onSelect, hideToolbar = fa
             businesses={filtered}
             activeId={activeId}
             onSelect={handleSelect}
+            markerStyle="dot"
             zoomEnabled={zoomEnabled}
           />
           <div className="map-overlay">

@@ -96,3 +96,11 @@ Las tablas tendrán claves foráneas entre bonos, carreras y comercios; restricc
 No se incluyen contraseñas ni claves en este documento. El repositorio, Vercel y Supabase están enlazados/configurados. El importador requiere `DATA_MIGRATION_TARGET=preview` o `production`; para producción también exige `CONFIRM_PRODUCTION_DATA_IMPORT=yes`. Las claves se guardan localmente en `.data/` o directamente en los gestores de entorno, nunca en Git.
 
 Las migraciones SQL deben quedar versionadas y ser la única vía normal de cambio del esquema, como recomienda Supabase. [Flujo de migraciones Supabase](https://supabase.com/docs/guides/deployment/database-migrations)
+
+## Páginas legales: actualización pendiente de publicación
+
+La migración `supabase/migrations/20261001010000_legal_content.sql` añade los cuatro textos legales a `site_content`: `legal.notice`, `legal.privacy`, `legal.cookies` y `legal.accessibility`. No modifica textos existentes ni datos de bonos. El importador para proyectos nuevos también incorpora estos contenidos. Las páginas consultan esa tabla y usan los textos iniciales como respaldo si aún no existe la fila correspondiente.
+
+Esta migración está preparada localmente y debe aplicarse al publicar estos cambios, después de la autorización del usuario. No se ha aplicado a Supabase ni se ha desplegado esta actualización.
+
+La migración `supabase/migrations/20261001020000_coupon_steps_copy.sql` actualiza la redacción de los dos primeros pasos de `coupon.page`, conservando el resto del contenido. También está pendiente de aplicar cuando se autorice publicar.

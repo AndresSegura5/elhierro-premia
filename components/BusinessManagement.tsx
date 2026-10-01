@@ -219,11 +219,10 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   </div>;
 }
 
-export function BusinessManagement({ businesses, accounts, categories, demoBusinessId }: {
+export function BusinessManagement({ businesses, accounts, categories }: {
   businesses: ManagedBusiness[];
   accounts: Array<{ username: string; business_id: string }>;
   categories: string[];
-  demoBusinessId?: string | null;
 }) {
   const [createState, createAction, creating] = useActionState(createBusinessAction, initialState);
   const [createOpen, setCreateOpen] = useState(false);
@@ -234,18 +233,17 @@ export function BusinessManagement({ businesses, accounts, categories, demoBusin
   const filteredBusinesses = useMemo(() => {
     const rows = businesses.map((item) => {
       const accountRecord = accounts.find((entry) => entry.business_id === item.business.id);
-      const demo = !accountRecord && demoBusinessId === item.business.id;
-      const account = !item.isActive ? "Acceso desactivado" : accountRecord?.username ?? (demo ? "admin (prueba)" : initialBusinessUsername(item.business.name));
-      const password = !item.isActive ? "Acceso desactivado" : demo ? "Acceso de prueba" : accountRecord ? "Clave privada; restablecer para renovarla" : "Sin acceso";
+      const account = !item.isActive ? "Acceso desactivado" : accountRecord?.username ?? initialBusinessUsername(item.business.name);
+      const password = !item.isActive ? "Acceso desactivado" : accountRecord ? "Clave privada; restablecer para renovarla" : "Sin acceso";
       const values = { name: item.business.name, address: `${item.business.address}, ${item.business.municipality}`, phone: localPhoneNumber(item.business.phone), username: account, password };
-      return { item, account: demo ? undefined : account, demo, values };
+      return { item, account: accountRecord?.username, values };
     }).filter(({ values }) => businessTableColumns.every((column) => !filters[column.key] || normalizeTableSearch(values[column.key as keyof typeof values]).includes(normalizeTableSearch(filters[column.key]))));
     if (sort) rows.sort((left, right) => {
       const comparison = left.values[sort.key as keyof typeof left.values].localeCompare(right.values[sort.key as keyof typeof right.values], "es", { numeric: true, sensitivity: "base" });
       return sort.direction === "asc" ? comparison : -comparison;
     });
     return rows;
-  }, [businesses, accounts, demoBusinessId, filters, sort]);
+  }, [businesses, accounts, filters, sort]);
   const businessPageCount = Math.max(1, Math.ceil(filteredBusinesses.length / businessPageSize));
   const currentBusinessPage = Math.min(businessPage, businessPageCount);
   const visibleBusinesses = filteredBusinesses.slice((currentBusinessPage - 1) * businessPageSize, currentBusinessPage * businessPageSize);
@@ -274,7 +272,7 @@ export function BusinessManagement({ businesses, accounts, categories, demoBusin
       </div>
       {businesses.length ? <div className="business-table-wrap"><table className="business-table">
         <thead><tr>{businessTableColumns.map((column) => <TableColumnHeader key={column.key} column={column} filterValue={filters[column.key] ?? ""} onFilter={(value) => setColumnFilter(column.key, value)} sortDirection={sort?.key === column.key ? sort.direction : undefined} onSort={() => sortColumn(column.key)} />)}<th><span className="sr-only">Acciones</span></th></tr></thead>
-        <tbody>{visibleBusinesses.length ? visibleBusinesses.map(({ item: { business, isActive }, account, demo }) => <BusinessRow key={business.id} business={business} active={isActive} account={account} demo={demo} categories={categories} />) : <tr><td colSpan={6} className="interactive-table-empty">No hay comercios que coincidan con los filtros.</td></tr>}</tbody>
+        <tbody>{visibleBusinesses.length ? visibleBusinesses.map(({ item: { business, isActive }, account }) => <BusinessRow key={business.id} business={business} active={isActive} account={account} categories={categories} />) : <tr><td colSpan={6} className="interactive-table-empty">No hay comercios que coincidan con los filtros.</td></tr>}</tbody>
       </table></div> : <p className="merchant-ledger-empty">Todavía no hay comercios registrados.</p>}
       {(filteredBusinesses.length > businessPageSize || Object.values(filters).some(Boolean)) && <nav className="record-pagination" aria-label="Paginación de comercios">
         <span>Mostrando {filteredBusinesses.length ? (currentBusinessPage - 1) * businessPageSize + 1 : 0}–{Math.min(currentBusinessPage * businessPageSize, filteredBusinesses.length)} de {filteredBusinesses.length.toLocaleString("es-ES")} comercios</span>
@@ -298,7 +296,7 @@ export function BusinessManagement({ businesses, accounts, categories, demoBusin
   </div>;
 }
 
-function BusinessRow({ business, active, account, demo, categories }: { business: Business; active: boolean; account?: string; demo: boolean; categories: string[] }) {
+function BusinessRow({ business, active, account, categories }: { business: Business; active: boolean; account?: string; categories: string[] }) {
   const [updateState, updateAction, updating] = useActionState(updateBusinessAction, initialState);
   const [deleteState, deleteAction, deleting] = useActionState(deleteBusinessAction, initialState);
   const [restoreState, restoreAction, restoring] = useActionState(restoreBusinessAction, initialState);
@@ -310,8 +308,8 @@ function BusinessRow({ business, active, account, demo, categories }: { business
       <td><strong>{business.name}</strong></td>
       <td><span className="business-table-address"><MapPin size={14} aria-hidden="true" />{business.address}, {business.municipality}</span></td>
       <td>{localPhoneNumber(business.phone)}</td>
-      <td>{account ?? (demo ? "admin (prueba)" : "—")}</td>
-      <td><code className="business-table-password">{!active ? "Acceso desactivado" : demo ? "Acceso de prueba" : account ? "Clave privada; restablecer para renovarla" : "Sin acceso"}</code></td>
+      <td>{account ?? initialBusinessUsername(business.name)}</td>
+      <td><code className="business-table-password">{!active ? "Acceso desactivado" : account ? "Clave privada; restablecer para renovarla" : "Sin acceso"}</code></td>
       <td><div className="business-table-actions">
         {active && <button className="business-icon-action" type="button" onClick={() => setEditOpen(true)} aria-label={`Editar ${business.name}`} title="Editar"><Pencil size={17} /></button>}
         {active ? <button className="business-icon-action is-danger" type="button" onClick={() => setConfirmDeleteOpen(true)} aria-label={`Borrar ${business.name}`} title="Borrar"><Trash2 size={17} /></button> : <form action={restoreAction}><input type="hidden" name="businessId" value={business.id} /><button className="business-icon-action" type="submit" disabled={restoring} aria-label={`Reactivar ${business.name}`} title="Reactivar"><RotateCcw size={17} /></button></form>}

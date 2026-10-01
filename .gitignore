@@ -20,3 +20,6 @@ supabase/.temp/
 /reformat_personal_presentation.py
 /tmp/
 /public/municipios-canarias.geojson
+
+# Generated from the installed MapLibre version before dev/build.
+/public/maplibre/

@@ -29,7 +29,7 @@ export default async function AdminBusinessesPage() {
           </div>
         </section>
         <AdminSectionNav active="businesses" />
-        <BusinessManagement businesses={businesses} accounts={accounts} categories={categories} demoBusinessId={session.businessId} />
+        <BusinessManagement businesses={businesses} accounts={accounts} categories={categories} />
       </main>
     </>
   );

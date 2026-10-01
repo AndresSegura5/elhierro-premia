@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { legalNavigation } from "@/lib/legal-content";
 
 export function SiteFooter() {
   return <footer className="site-footer">
@@ -7,10 +8,9 @@ export function SiteFooter() {
         <div className="site-footer-brand-logos">
           <img className="site-footer-cabildo" src="/branding/cabildo-el-hierro.svg" alt="Cabildo de El Hierro" />
           <span aria-hidden="true" />
-          <strong>El Hierro<br />premia deportistas</strong>
+          <strong>Ganamos <em>todos</em><br />Deporte y comercio</strong>
         </div>
         <p>Deporte que conecta. Comercio que da vida.</p>
-        <small>DEPORTE, COMERCIO Y VIDA EN EL HIERRO.</small>
       </div>
       <nav className="site-footer-map" aria-label="Árbol de páginas">
         <strong>Páginas</strong>
@@ -31,10 +31,7 @@ export function SiteFooter() {
       <div className="site-footer-bottom">
         <small>© {new Date().getFullYear()} Excmo. Cabildo Insular de El Hierro</small>
         <nav className="site-footer-legal" aria-label="Información legal">
-          <span>Aviso legal</span>
-          <span>Privacidad</span>
-          <span>Cookies</span>
-          <span>Accesibilidad</span>
+          {legalNavigation.map((page) => <Link key={page.key} href={page.href}>{page.label}</Link>)}
         </nav>
       </div>
     </div>

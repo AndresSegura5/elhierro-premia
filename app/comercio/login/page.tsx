@@ -8,7 +8,8 @@ import "../../auth.css";
 
 export const dynamic = "force-dynamic";
 export default async function MerchantLoginPage() {
-  if ((await getSession())?.businessId) redirect("/comercio");
+  const session = await getSession();
+  if (session?.role === "merchant" && session.businessId) redirect("/comercio");
   return <>
     <Header />
     <AuthLayout eyebrow="Acceso de comercios" title="Área de comercios" description="Consulta bonos, registra compras y revisa los movimientos de tu negocio.">

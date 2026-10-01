@@ -24,7 +24,6 @@ type UserRow = {
   email: string | null;
   must_change_password: boolean;
   business_id: string | null;
-  demo_business_id: string | null;
   failed_attempts: number;
   locked_until: string | Date | null;
 };
@@ -59,12 +58,12 @@ function temporaryPassword() {
   return randomBytes(24).toString("base64url");
 }
 
-function mapSession(row: Pick<UserRow, "id" | "username" | "role" | "business_id" | "demo_business_id" | "first_name" | "last_name" | "email" | "must_change_password">): SessionUser {
+function mapSession(row: Pick<UserRow, "id" | "username" | "role" | "business_id" | "first_name" | "last_name" | "email" | "must_change_password">): SessionUser {
   return {
     id: Number(row.id),
     username: row.username,
     role: row.role,
-    businessId: row.role === "admin" ? row.demo_business_id : row.business_id,
+    businessId: row.role === "merchant" ? row.business_id : null,
     firstName: row.first_name,
     lastName: row.last_name,
     email: row.email,
@@ -104,7 +103,7 @@ export async function signIn(username: string, password: string, role: Role) {
   const sql = getPostgres();
   const rows = role === "admin"
     ? await sql<UserRow[]>`SELECT * FROM public.users WHERE (lower(username) = ${normalized} OR lower(email) = ${normalized}) AND role = 'admin'`
-    : await sql<UserRow[]>`SELECT * FROM public.users WHERE lower(username) = ${normalized} AND (role = 'merchant' OR (role = 'admin' AND demo_business_id IS NOT NULL))`;
+    : await sql<UserRow[]>`SELECT * FROM public.users WHERE lower(username) = ${normalized} AND role = 'merchant'`;
   const user = rows[0];
   if (!user || (user.locked_until && new Date(user.locked_until).getTime() > Date.now())) return false;
   if (!(await passwordMatches(password, user.password_hash))) {
@@ -116,14 +115,18 @@ export async function signIn(username: string, password: string, role: Role) {
     `;
     return false;
   }
+  if (role === "merchant" && (!user.business_id || !(await isBusinessActive(user.business_id)))) return false;
 
+  const jar = await cookies();
+  const previousToken = jar.get(COOKIE)?.value;
   const token = randomBytes(32).toString("base64url");
   const expires = new Date(Date.now() + SESSION_HOURS * 60 * 60_000);
   await sql.begin(async (tx) => {
     await tx`UPDATE public.users SET failed_attempts = 0, locked_until = NULL WHERE id = ${user.id}`;
     await tx`INSERT INTO public.sessions (token_hash, user_id, expires_at) VALUES (${tokenHash(token)}, ${user.id}, ${expires.toISOString()})`;
+    if (previousToken) await tx`DELETE FROM public.sessions WHERE token_hash = ${tokenHash(previousToken)}`;
   });
-  (await cookies()).set(COOKIE, token, {
+  jar.set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -138,7 +141,7 @@ export async function getSession(): Promise<SessionUser | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   const [row] = await getPostgres()<UserRow[]>`
-    SELECT u.id, u.username, u.role, u.business_id, u.demo_business_id,
+    SELECT u.id, u.username, u.role, u.business_id,
       u.first_name, u.last_name, u.email, u.must_change_password
     FROM public.sessions s JOIN public.users u ON u.id = s.user_id
     WHERE s.token_hash = ${tokenHash(token)} AND s.expires_at > now()
@@ -155,7 +158,7 @@ export async function requireAdmin() {
 
 export async function requireMerchant() {
   const session = await getSession();
-  if (!session || !session.businessId || !(await isBusinessActive(session.businessId))) redirect("/comercio/login");
+  if (session?.role !== "merchant" || !session.businessId || !(await isBusinessActive(session.businessId))) redirect("/comercio/login");
   return session;
 }
 

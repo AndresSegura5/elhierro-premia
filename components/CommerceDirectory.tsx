@@ -6,11 +6,11 @@ import { IslandMap, iconForBusiness } from "@/components/IslandMap";
 import { BusinessPhoto } from "@/components/BusinessPhoto";
 import { StyledSelect } from "@/components/StyledSelect";
 import { PageTitleHero } from "@/components/PageTitleHero";
+import { MunicipalitySilhouette } from "@/components/MunicipalitySilhouette";
 import { localPhoneNumber, phoneLink } from "@/lib/phone";
 import type { Business, Municipality } from "@/lib/types";
 
 const municipalities: Municipality[] = ["Valverde", "La Frontera", "El Pinar"];
-const couponCodePattern = /^EH-(?:BES|BIM|MER)-[A-HJ-KM-NP-Z][1-9][A-HJ-KM-NP-Z][1-9]{3}[A-HJ-KM-NP-Z]$/i;
 
 function normalize(value: string) {
   return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -22,22 +22,7 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
   const [municipality, setMunicipality] = useState<Municipality | "">("");
   const [selectedId, setSelectedId] = useState<string | null>();
   const [mapExpanded, setMapExpanded] = useState(false);
-  const [couponBusinessId, setCouponBusinessId] = useState<string>();
   const categories = useMemo(() => [...new Set(businesses.map((business) => business.category))], [businesses]);
-
-  useEffect(() => {
-    const code = query.trim();
-    if (!couponCodePattern.test(code)) {
-      setCouponBusinessId(undefined);
-      return;
-    }
-    const controller = new AbortController();
-    fetch(`/api/bonos/${encodeURIComponent(code)}`, { signal: controller.signal, cache: "no-store" })
-      .then((response) => response.ok ? response.json() : null)
-      .then((data) => { if (!controller.signal.aborted) setCouponBusinessId(data?.coupon?.businessId); })
-      .catch(() => { if (!controller.signal.aborted) setCouponBusinessId(undefined); });
-    return () => controller.abort();
-  }, [query]);
 
   useEffect(() => {
     if (!mapExpanded) return;
@@ -53,20 +38,20 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
     return businesses.filter((business) =>
       (!municipality || business.municipality === municipality) &&
       (!category || business.category === category) &&
-      (couponBusinessId
-        ? business.id === couponBusinessId
-        : normalize(`${business.name} ${business.category} ${business.area} ${business.municipality} ${business.address}`)
-          .includes(term)),
+      normalize(`${business.name} ${business.category} ${business.area} ${business.municipality} ${business.address}`)
+        .includes(term),
     );
-  }, [businesses, category, couponBusinessId, municipality, query]);
+  }, [businesses, category, municipality, query]);
+  const visibleBusinessIds = useMemo(
+    () => new Set(visibleBusinesses.map((business) => business.id)),
+    [visibleBusinesses],
+  );
 
   const grouped = municipalities.map((name) => ({
     name,
     businesses: visibleBusinesses.filter((business) => business.municipality === name),
   })).filter((group) => group.businesses.length > 0);
-  const activeId = selectedId === null
-    ? undefined
-    : selectedId ?? (visibleBusinesses.some((business) => business.id === couponBusinessId) ? couponBusinessId : undefined);
+  const activeId = selectedId ?? undefined;
 
   return (
     <div className="directory-page" id="directorio">
@@ -75,26 +60,6 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
       </PageTitleHero>
 
       <div className="directory-content">
-        <section className={`directory-map${mapExpanded ? " directory-map--expanded" : ""}`} aria-label="Mapa de los comercios">
-          <IslandMap
-            businesses={visibleBusinesses}
-            activeId={activeId}
-            onSelect={setSelectedId}
-            basemap="street"
-            markerStyle="dot"
-          />
-          <button
-            type="button"
-            className="directory-map-expand"
-            aria-label={mapExpanded ? "Cerrar mapa ampliado" : "Ampliar mapa"}
-            aria-pressed={mapExpanded}
-            onClick={() => setMapExpanded((expanded) => !expanded)}
-            title={mapExpanded ? "Cerrar mapa ampliado" : "Ampliar mapa"}
-          >
-            {mapExpanded ? <Minimize2 size={19} aria-hidden="true" /> : <Maximize2 size={19} aria-hidden="true" />}
-          </button>
-        </section>
-
         <aside className="directory-panel" aria-label="Buscar y filtrar comercios">
           <div className="directory-controls">
             <label className="directory-search">
@@ -105,13 +70,9 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
                 onChange={(event) => {
                   setQuery(event.target.value);
                   setSelectedId(undefined);
-                  if (couponCodePattern.test(event.target.value.trim())) {
-                    setCategory("");
-                    setMunicipality("");
-                  }
                 }}
-                placeholder="Comercio, zona o código del bono"
-                aria-label="Buscar comercio o código del bono"
+                placeholder="Comercio o zona"
+                aria-label="Buscar comercio o zona"
               />
               {query && (
                 <button type="button" aria-label="Limpiar búsqueda" onClick={() => { setQuery(""); setSelectedId(undefined); }}>
@@ -131,15 +92,13 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
             </div>
             <div className="directory-list-heading">
               <h2>Comercios participantes</h2>
-              <span role="status">{visibleBusinesses.length} {visibleBusinesses.length === 1 ? "resultado" : "resultados"}</span>
             </div>
-            <p className="directory-demo-note">Datos de ejemplo</p>
           </div>
 
           <div className="directory-list" aria-label="Listado de comercios por municipio">
             {grouped.length ? grouped.map((group) => (
               <section className="directory-group" key={group.name} aria-label={`Comercios en ${group.name}`}>
-                <h3><MapPin size={15} aria-hidden="true" />{group.name}<span>{group.businesses.length}</span></h3>
+                <h3><MunicipalitySilhouette municipality={group.name} className="directory-municipality-shape" />{group.name}<span aria-label={`${group.businesses.length} ${group.businesses.length === 1 ? "comercio" : "comercios"}`}>{group.businesses.length}</span></h3>
                 <ul>
                   {group.businesses.map((business) => {
                     const selected = activeId === business.id;
@@ -155,8 +114,8 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
                           />
                           <span className="directory-business-copy">
                             <strong>{business.name}</strong>
-                            <small><MapPin size={12} aria-hidden="true" />{business.address}</small>
-                            <span className="directory-business-hours"><Clock3 size={13} aria-hidden="true" />{business.openingHours}</span>
+                            <small><MapPin size={15} aria-hidden="true" /><span>{business.address}</span></small>
+                            <span className="directory-business-hours"><Clock3 size={15} aria-hidden="true" /><span>{business.openingHours}</span></span>
                           </span>
                         </button>
                         {selected && (
@@ -172,6 +131,28 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
             )) : <p className="directory-empty" role="status">No hay comercios que coincidan con la búsqueda.</p>}
           </div>
         </aside>
+
+        <section className={`directory-map${mapExpanded ? " directory-map--expanded" : ""}`} aria-label="Mapa de los comercios">
+          <IslandMap
+            businesses={businesses}
+            visibleBusinessIds={visibleBusinessIds}
+            activeId={activeId}
+            onSelect={setSelectedId}
+            markerStyle="dot"
+            scrollWheelZoom={mapExpanded}
+            clipToIsland={false}
+          />
+          <button
+            type="button"
+            className="directory-map-expand"
+            aria-label={mapExpanded ? "Cerrar mapa ampliado" : "Ampliar mapa"}
+            aria-pressed={mapExpanded}
+            onClick={() => setMapExpanded((expanded) => !expanded)}
+            title={mapExpanded ? "Cerrar mapa ampliado" : "Ampliar mapa"}
+          >
+            {mapExpanded ? <Minimize2 size={19} aria-hidden="true" /> : <Maximize2 size={19} aria-hidden="true" />}
+          </button>
+        </section>
       </div>
     </div>
   );

@@ -162,7 +162,7 @@ body.has-business-modal { overflow: hidden; }
 .admin-account-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: end; gap: 14px; }
 .admin-account-form label { display: grid; gap: 7px; min-width: 0; color: var(--ink); font-size: 13px; font-weight: 700; }
 .admin-account-form input { width: 100%; min-width: 0; height: 46px; padding: 0 12px; border: 1px solid #d7e1e8; border-radius: 5px; background: #fff; color: var(--ink); font: inherit; font-weight: 500; }
-.admin-account-form input:focus { border-color: var(--green); outline: 2px solid rgb(4 61 148 / 12%); }
+.admin-account-form input:focus { border-color: var(--green); outline: 2px solid rgb(7 22 38 / 12%); }
 .admin-account-form input:disabled { background: #f3f6f9; }
 .admin-account-wide { grid-column: 1 / -1; }
 .admin-account-form > .button { min-height: var(--button-height); }
@@ -276,7 +276,7 @@ body.has-business-modal { overflow: hidden; }
 .date-picker { position: relative; min-width: 0; }
 .date-picker-trigger { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; height: 48px; padding: 0 12px; border: 1px solid var(--line); border-radius: 5px; background: #fff; color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
 .date-picker-trigger:hover { border-color: #9aabba; }
-.date-picker-trigger:focus-visible { outline: 2px solid rgb(4 61 148 / 25%); outline-offset: 1px; }
+.date-picker-trigger:focus-visible { outline: 2px solid rgb(7 22 38 / 25%); outline-offset: 1px; }
 .date-picker-trigger:disabled { background: #f3f6f9; color: var(--muted); cursor: not-allowed; }
 .date-picker-trigger svg { flex: 0 0 auto; color: var(--accent-dark); }
 .date-picker-popover { position: absolute; z-index: 50; top: calc(100% + 7px); left: 0; width: 294px; padding: 13px; border: 1px solid var(--line); border-radius: 9px; background: #fff; box-shadow: 0 16px 38px rgb(7 22 38 / 18%); }

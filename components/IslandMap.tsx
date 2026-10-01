@@ -17,8 +17,12 @@ import {
 } from "lucide-react";
 import type { Business } from "@/lib/types";
 import { localPhoneNumber, phoneLink } from "@/lib/phone";
-import type { Map as LeafletMap, Marker, TileLayerOptions } from "leaflet";
+import type { Map as LeafletMap, Marker, Path as LeafletPath } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import "maplibre-gl/dist/maplibre-gl.css";
+
+const MAP_STYLE = "/branding/positron-sea.json";
+const MAP_ATTRIBUTION = '<span class="map-attribution-copyright">&copy;</span> <a href="https://www.openmaptiles.org/">OpenMapTiles</a> · <span class="map-attribution-copyright">&copy;</span> <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 export function iconForBusiness(category: string) {
   const name = category.toLowerCase();
@@ -53,20 +57,28 @@ export function IslandMap({
   businesses,
   activeId,
   onSelect,
-  basemap = "satellite",
   markerStyle = "icon",
+  visibleBusinessIds,
   zoomEnabled = true,
+  scrollWheelZoom = false,
+  clipToIsland = true,
 }: {
   businesses: Business[];
   activeId?: string;
   onSelect: (id: string | null) => void;
-  basemap?: "satellite" | "street";
   markerStyle?: "icon" | "dot";
+  visibleBusinessIds?: ReadonlySet<string>;
   zoomEnabled?: boolean;
+  scrollWheelZoom?: boolean;
+  clipToIsland?: boolean;
 }) {
   const element = useRef<HTMLDivElement>(null);
   const map = useRef<LeafletMap | null>(null);
   const markers = useRef<Map<string, Marker>>(new Map());
+  const markerBusinesses = useRef<Map<string, Business>>(new Map());
+  const businessesRef = useRef(businesses);
+  const visibleBusinessIdsRef = useRef(visibleBusinessIds);
+  const syncMarkersRef = useRef<((items: Business[], visibleIds?: ReadonlySet<string>) => void) | null>(null);
   const onSelectRef = useRef(onSelect);
   const hoverCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [hoveredId, setHoveredId] = useState<string | undefined>();
@@ -74,6 +86,8 @@ export function IslandMap({
   const activeIdRef = useRef(displayedId);
   const [cardPosition, setCardPosition] = useState<ReturnType<typeof cardPositionFor> | null>(null);
   onSelectRef.current = onSelect;
+  businessesRef.current = businesses;
+  visibleBusinessIdsRef.current = visibleBusinessIds;
   activeIdRef.current = displayedId;
   const activeBusiness = displayedId
     ? businesses.find((business) => business.id === displayedId)
@@ -111,7 +125,7 @@ export function IslandMap({
       } catch {
         islandCoords = [];
       }
-      if (basemap === "satellite") {
+      if (clipToIsland) {
         try {
           const response = await fetch("/municipios-el-hierro.geojson");
           const data = await response.json();
@@ -122,11 +136,16 @@ export function IslandMap({
       }
 
       if (disposed || !element.current) return;
-      const L = await import("leaflet");
+      const [L, { maplibreGL }, { setWorkerUrl }] = await Promise.all([
+        import("leaflet"),
+        import("@maplibre/maplibre-gl-leaflet"),
+        import("maplibre-gl"),
+      ]);
       if (disposed || !element.current) return;
+      setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
 
       const instance = L.map(element.current, {
-        scrollWheelZoom: false,
+        scrollWheelZoom,
         zoomControl: false,
         doubleClickZoom: zoomEnabled,
         touchZoom: zoomEnabled,
@@ -134,37 +153,21 @@ export function IslandMap({
         keyboard: zoomEnabled,
         dragging: zoomEnabled,
         attributionControl: false,
-        zoomSnap: 0.1,
+        minZoom: 1,
+        maxZoom: 20,
+        zoomSnap: clipToIsland ? 0.1 : 1,
         zoomDelta: 1,
       }).setView([27.75, -17.98], 11);
       map.current = instance;
       instanceForCleanup = instance;
       if (zoomEnabled) {
-        L.control.zoom({ position: basemap === "street" ? "bottomright" : "topright" }).addTo(instance);
+        L.control.zoom({ position: clipToIsland ? "topright" : "bottomright" }).addTo(instance);
       }
-      L.control.attribution({ position: basemap === "street" ? "bottomleft" : "bottomright" }).addTo(instance);
-      if (basemap === "street") {
-        L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}", {
-          maxZoom: 19,
-          attribution: 'Tiles &copy; <a href="https://www.esri.com/">Esri</a> &mdash; Esri, DeLorme, NAVTEQ, TomTom, Intermap, iPC, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, Esri Japan, METI, Esri China (Hong Kong), and the GIS User Community',
-        }).addTo(instance);
-      } else {
-        const satelliteOptions: TileLayerOptions & { ext: string } = {
-          minZoom: 0,
-          maxZoom: 20,
-          maxNativeZoom: 20,
-          keepBuffer: 2,
-          attribution:
-            "&copy; CNES, Distribution Airbus DS, &copy; Airbus DS, &copy; PlanetObserver (Contains Copernicus Data) | &copy; <a href=\"https://www.stadiamaps.com/\" target=\"_blank\">Stadia Maps</a> &copy; <a href=\"https://openmaptiles.org/\" target=\"_blank\">OpenMapTiles</a> &copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors",
-          ext: "jpg",
-        };
-        L.tileLayer(
-          "https://tiles.stadiamaps.com/tiles/alidade_satellite/{z}/{x}/{y}@2x.{ext}",
-          satelliteOptions,
-        ).addTo(instance);
-      }
+      L.control.attribution({ position: "bottomleft", prefix: false })
+        .addTo(instance).addAttribution(MAP_ATTRIBUTION);
+      maplibreGL({ style: MAP_STYLE, attributionControl: false }).addTo(instance);
 
-      if (islandCoords.length) {
+      if (clipToIsland && islandCoords.length) {
         islandMapPane = instance.getPanes().mapPane as HTMLElement;
         const clipStride = Math.max(1, Math.ceil(islandCoords.length / 1000));
         const clipCoords = islandCoords.filter((_, index) => index % clipStride === 0);
@@ -183,64 +186,113 @@ export function IslandMap({
         updateIslandClip();
       }
 
-      if (islandCoords.length) {
+      if (clipToIsland && islandCoords.length) {
         L.polygon(islandCoords, {
-          color: basemap === "satellite" ? "#ff7a1a" : "#d9edf7",
-          weight: basemap === "satellite" ? 3 : 2.5,
-          opacity: basemap === "satellite" ? 1 : 0.85,
-          fillColor: basemap === "satellite" ? "#ff7a1a" : "#eaf6fc",
-          fillOpacity: basemap === "satellite" ? 0.08 : 0.13,
+          color: "#071626",
+          weight: 4,
+          opacity: 0.95,
+          fill: false,
         }).addTo(instance);
       }
-      if (basemap === "satellite" && municipalityGeoJson?.features?.length) {
+      if (clipToIsland && municipalityGeoJson?.features?.length) {
         L.geoJSON(municipalityGeoJson, {
           style: {
-            color: "#ff7a1a",
-            weight: 2,
+            color: "#071626",
+            weight: 3,
             opacity: 0.95,
-            fill: false,
+            fillColor: "#071626",
+            fillOpacity: 0.02,
+            fill: true,
           },
-          onEachFeature: (feature, layer) => {
-            const name = feature.properties?.nombre;
-            if (name) layer.bindTooltip(name, { sticky: true });
+          onEachFeature: (_feature, layer) => {
+            const municipality = layer as LeafletPath;
+            municipality.on({
+              mouseover: () => municipality.setStyle({ fillColor: "#071626", fillOpacity: 0.22 }),
+              mouseout: () => municipality.setStyle({ fillColor: "#071626", fillOpacity: 0.02 }),
+            });
           },
         }).addTo(instance);
       }
 
-      businesses.forEach((business) => {
-        const Icon = iconForBusiness(business.category);
-        const marker = L.marker([business.lat, business.lng], {
-          icon: L.divIcon({
+      const syncMarkers = (items: Business[], visibleIds?: ReadonlySet<string>) => {
+        const nextIds = new Set(items.map((business) => business.id));
+        markers.current.forEach((marker, id) => {
+          if (nextIds.has(id)) return;
+          marker.off();
+          instance.removeLayer(marker);
+          markers.current.delete(id);
+          markerBusinesses.current.delete(id);
+        });
+
+        items.forEach((business) => {
+          let marker = markers.current.get(business.id);
+          const Icon = iconForBusiness(business.category);
+          const icon = L.divIcon({
             className: "island-marker",
             html: `<span class="${markerStyle === "dot" ? "directory-dot " : ""}${business.id === activeIdRef.current ? "selected" : ""}">${markerStyle === "icon" ? renderToStaticMarkup(<Icon size={19} strokeWidth={2.4} aria-hidden="true" />) : ""}</span>`,
             iconSize: markerStyle === "dot" ? [16, 16] : [38, 38],
             iconAnchor: markerStyle === "dot" ? [8, 8] : [19, 36],
-          }),
-        }).addTo(instance);
-        marker.getElement()?.setAttribute("aria-label", business.name);
-        markers.current.set(business.id, marker);
-        marker.on("mouseover", () => {
-          if (hoverCloseTimer.current) clearTimeout(hoverCloseTimer.current);
-          setHoveredId(business.id);
+          });
+
+          if (marker) {
+            marker.setLatLng([business.lat, business.lng]);
+            if (markerBusinesses.current.get(business.id) !== business) marker.setIcon(icon);
+          } else {
+            marker = L.marker([business.lat, business.lng], { icon }).addTo(instance);
+            marker.on("mouseover", () => {
+              if (hoverCloseTimer.current) clearTimeout(hoverCloseTimer.current);
+              setHoveredId(business.id);
+            });
+            marker.on("mouseout", () => {
+              hoverCloseTimer.current = setTimeout(() => setHoveredId(undefined), 250);
+            });
+            marker.on("click", () => onSelectRef.current(business.id));
+            markers.current.set(business.id, marker);
+          }
+          markerBusinesses.current.set(business.id, business);
+
+          const isVisible = !visibleIds || visibleIds.has(business.id);
+          marker.setOpacity(isVisible ? 1 : 0);
+          const markerElement = marker.getElement();
+          markerElement?.setAttribute("aria-label", business.name);
+          markerElement?.setAttribute("aria-hidden", String(!isVisible));
+          if (markerElement) markerElement.style.pointerEvents = isVisible ? "auto" : "none";
         });
-        marker.on("mouseout", () => {
-          hoverCloseTimer.current = setTimeout(() => setHoveredId(undefined), 250);
-        });
-        marker.on("click", () => {
-          onSelectRef.current(business.id);
-        });
-      });
+      };
+      syncMarkersRef.current = syncMarkers;
+      syncMarkers(businessesRef.current, visibleBusinessIdsRef.current);
+
+      const updateCardPosition = () => {
+        const selectedBusiness = activeIdRef.current
+          ? businessesRef.current.find((business) => business.id === activeIdRef.current)
+          : undefined;
+        if (!selectedBusiness) {
+          setCardPosition(null);
+          return;
+        }
+
+        const point = instance.latLngToContainerPoint([selectedBusiness.lat, selectedBusiness.lng]);
+        const size = instance.getSize();
+        // Keep the card attached to the marker, and hide it while its marker is
+        // outside the visible map area instead of leaving the card stranded at an edge.
+        if (point.x < 0 || point.y < 0 || point.x > size.x || point.y > size.y) {
+          setCardPosition(null);
+          return;
+        }
+        setCardPosition(cardPositionFor(point, size));
+      };
+      instance.on("move zoom resize", updateCardPosition);
 
       const fitView = () => {
         if (islandCoords.length) {
           instance.fitBounds(
             L.latLngBounds(islandCoords.map(([lat, lng]) => L.latLng(lat, lng))),
-            { padding: basemap === "street" ? [24, 24] : [12, 12], animate: false },
+            { padding: clipToIsland ? [12, 12] : [24, 24], animate: false },
           );
-          if (basemap === "satellite") instance.setZoom(instance.getZoom() + 0.1, { animate: false });
-        } else if (businesses.length) {
+          if (clipToIsland) instance.setZoom(instance.getZoom() + 0.1, { animate: false });
+        } else if (businessesRef.current.length) {
           instance.fitBounds(
-            L.latLngBounds(businesses.map((b) => [b.lat, b.lng])),
+            L.latLngBounds(businessesRef.current.map((b) => [b.lat, b.lng])),
             { padding: [45, 45], maxZoom: 12 },
           );
         }
@@ -252,15 +304,7 @@ export function IslandMap({
           instance.invalidateSize({ pan: false });
           fitView();
           updateIslandClip();
-          const selectedBusiness = activeIdRef.current
-            ? businesses.find((business) => business.id === activeIdRef.current)
-            : undefined;
-          if (selectedBusiness) {
-            const point = instance.latLngToContainerPoint(
-              L.latLng(selectedBusiness.lat, selectedBusiness.lng),
-            );
-            setCardPosition(cardPositionFor(point, instance.getSize()));
-          }
+          updateCardPosition();
         });
       };
       instance.whenReady(updateLayout);
@@ -279,11 +323,17 @@ export function IslandMap({
         islandMapPane.style.height = "";
         islandMapPane.style.clipPath = "";
       }
+      syncMarkersRef.current = null;
       map.current?.remove();
       map.current = null;
       markers.current.clear();
+      markerBusinesses.current.clear();
     };
-  }, [businesses, basemap, markerStyle, zoomEnabled]);
+  }, [markerStyle, zoomEnabled, scrollWheelZoom, clipToIsland]);
+
+  useEffect(() => {
+    syncMarkersRef.current?.(businesses, visibleBusinessIds);
+  }, [businesses, visibleBusinessIds, markerStyle]);
 
   return (
     <div className="island-map-stage">
@@ -328,7 +378,17 @@ export function IslandMap({
             <dl>
               <div>
                 <dt><MapPin size={16} aria-hidden="true" /> Dirección</dt>
-                <dd>{activeBusiness.address}</dd>
+                <dd>
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${activeBusiness.name}, ${activeBusiness.address}, El Hierro`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Ver ${activeBusiness.name} en Google Maps`}
+                  >
+                    {activeBusiness.address}
+                    <ArrowUpRight size={14} aria-hidden="true" />
+                  </a>
+                </dd>
               </div>
               <div>
                 <dt><Clock3 size={16} aria-hidden="true" /> Horario</dt>

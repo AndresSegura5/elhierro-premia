@@ -30,9 +30,8 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
       <header className={`site-header${overlay ? " site-header--overlay" : ""}${menuOpen ? " site-header--menu-open" : ""}`}>
         <Link href="/" className="brand">
           <img className="brand-logo" src="/branding/site-logo.svg" alt="El Hierro premia deportistas" />
-          <span className="brand-affiliations" aria-label="Consejería de Deportes y Consejería de Empleo">
-            <span>Consejería de Deportes</span>
-            <span>Consejería de Empleo</span>
+          <span className="brand-affiliations" aria-label="Cabildo de El Hierro">
+            <span>CABILDO DE<br />EL HIERRO</span>
           </span>
         </Link>
         <button
@@ -70,18 +69,14 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
               className="nav-business"
               href="/comercio"
               onClick={() => setMenuOpen(false)}
-              aria-current={pathname.startsWith("/comercio") ? "page" : undefined}
+              aria-current={pathname === "/comercio" || pathname.startsWith("/comercio/") ? "page" : undefined}
             >
               <Store size={16} />
               Área de comercios
               <ArrowUpRight size={15} />
             </Link>
           )}
-          {username && isAdmin && merchantName ? (
-            <Link href="/admin" onClick={() => setMenuOpen(false)} className="nav-admin nav-icon" title="Panel de administración" aria-label="Ir al panel de administración">
-              <UserRound size={19} aria-hidden="true" />
-            </Link>
-          ) : username ? (
+          {username && isAdmin ? (
             <details className="nav-account-menu" ref={accountMenuRef}>
               <summary className="nav-admin nav-icon" title="Cuenta" aria-label="Abrir opciones de cuenta"><UserRound size={19} aria-hidden="true" /></summary>
               <div className="nav-account-popover nav-merchant-popover">

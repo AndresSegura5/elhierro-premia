@@ -5,6 +5,8 @@ import * as sqliteStore from "./store-sqlite";
 import { hasPostgresDatabase, getPostgres } from "./postgres";
 import { addDays, BONO_CENTS, couponStatus, todayInCanary } from "./bonos";
 import { couponRules, siteContentDefaults } from "./data";
+import { legalContentDefaults } from "./legal-content";
+import { chooseLeastAssignedBusiness } from "./coupon-assignment";
 import { businessCategories } from "./business-categories";
 import type { Business, Coupon, ManagedBusiness, Municipality, Race, Redemption } from "./types";
 
@@ -147,7 +149,7 @@ export async function listCouponRules(): Promise<string[]> {
 }
 
 export async function getSiteContent<T = unknown>(key: string): Promise<T | undefined> {
-  const defaults = siteContentDefaults as unknown as Record<string, T>;
+  const defaults = { ...siteContentDefaults, ...legalContentDefaults } as unknown as Record<string, T>;
   if (!hasPostgresDatabase()) return defaults[key];
   const [row] = await getPostgres()<Array<{ content: T }>>`SELECT content FROM public.site_content WHERE content_key = ${key}`;
   return row?.content ?? defaults[key];
@@ -290,19 +292,32 @@ export async function issueMissingCoupons(raceId: string) {
     if (!prefix) throw new Error("Carrera no reconocida.");
     const [countRow] = await tx`SELECT count(*)::int AS total FROM public.coupons WHERE race_id = ${raceId}`;
     const count = Number(countRow.total);
+    const existingAssignments = await tx<Array<{ business_id: string; total: number }>>`
+      SELECT c.business_id, count(*)::int AS total
+      FROM public.coupons c
+      JOIN public.businesses b ON b.id = c.business_id
+      WHERE c.race_id = ${raceId} AND b.active = true
+      GROUP BY c.business_id
+    `;
+    const assignedCoupons = new Map(currentBusinesses.map(({ id }) => [id, 0]));
+    for (const assignment of existingAssignments) {
+      if (assignedCoupons.has(assignment.business_id)) assignedCoupons.set(assignment.business_id, Number(assignment.total));
+    }
     let generated = 0;
     for (let serial = count + 1; serial <= race.couponQuantity; serial++) {
+      const business = chooseLeastAssignedBusiness(currentBusinesses, assignedCoupons);
       let inserted = false;
       for (let attempt = 0; attempt < 8 && !inserted; attempt++) {
         const code = generateCouponCode(prefix);
         const result = await tx`
           INSERT INTO public.coupons (code, race_id, business_id, amount_cents)
-          VALUES (${code}, ${raceId}, ${currentBusinesses[(serial - 1) % currentBusinesses.length].id}, ${BONO_CENTS})
+          VALUES (${code}, ${raceId}, ${business.id}, ${BONO_CENTS})
           ON CONFLICT (code) DO NOTHING RETURNING code
         `;
         inserted = result.length > 0;
       }
       if (!inserted) throw new Error("No se pudo generar un código único tras varios intentos.");
+      assignedCoupons.set(business.id, (assignedCoupons.get(business.id) ?? 0) + 1);
       generated += 1;
     }
     return generated;

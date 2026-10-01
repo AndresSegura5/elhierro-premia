@@ -56,7 +56,7 @@ export default async function BusinessAccessPage() {
   });
   return (
     <>
-      <Header merchantName={business.name} merchantAddress={business.address} merchantPhone={business.phone} merchantHours={business.openingHours} username={session.username} isAdmin={session.role === "admin"} />
+      <Header merchantName={business.name} merchantAddress={business.address} merchantPhone={business.phone} merchantHours={business.openingHours} username={session.username} />
       <main className="merchant-main">
         <section className="merchant-hero">
           <PageTitleHero variant="embedded">

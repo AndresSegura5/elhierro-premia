@@ -23,7 +23,6 @@ type UserRow = {
   email: string | null;
   must_change_password: number;
   business_id: string | null;
-  demo_business_id: string | null;
   failed_attempts: number;
   locked_until: string | null;
 };
@@ -81,7 +80,7 @@ export async function signIn(username: string, password: string, role: Role) {
   const db = getDatabase();
   const user = role === "admin"
     ? db.prepare("SELECT * FROM users WHERE (username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE) AND role = 'admin'").get(normalized, normalized) as UserRow | undefined
-    : db.prepare("SELECT * FROM users WHERE username = ? COLLATE NOCASE AND (role = 'merchant' OR (role = 'admin' AND demo_business_id IS NOT NULL))").get(normalized) as UserRow | undefined;
+    : db.prepare("SELECT * FROM users WHERE username = ? COLLATE NOCASE AND role = 'merchant'").get(normalized) as UserRow | undefined;
   if (!user || (user.locked_until && user.locked_until > new Date().toISOString())) return false;
   const passwordIsValid = await passwordMatches(password, user.password_hash);
   if (!passwordIsValid) {
@@ -90,12 +89,23 @@ export async function signIn(username: string, password: string, role: Role) {
       .run(attempts >= 5 ? 0 : attempts, attempts >= 5 ? new Date(Date.now() + 15 * 60_000).toISOString() : null, user.id);
     return false;
   }
+  if (role === "merchant" && (!user.business_id || !isBusinessActive(user.business_id))) return false;
+  const jar = await cookies();
+  const previousToken = jar.get(COOKIE)?.value;
   const token = randomBytes(32).toString("base64url");
   const expires = new Date(Date.now() + SESSION_HOURS * 60 * 60_000);
-  db.prepare("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?").run(user.id);
-  db.prepare("INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)")
-    .run(tokenHash(token), user.id, expires.toISOString());
-  (await cookies()).set(COOKIE, token, {
+  db.exec("BEGIN IMMEDIATE");
+  try {
+    db.prepare("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?").run(user.id);
+    db.prepare("INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)")
+      .run(tokenHash(token), user.id, expires.toISOString());
+    if (previousToken) db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(tokenHash(previousToken));
+    db.exec("COMMIT");
+  } catch (error) {
+    db.exec("ROLLBACK");
+    throw error;
+  }
+  jar.set(COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -109,16 +119,16 @@ export async function getSession(): Promise<SessionUser | null> {
   const token = (await cookies()).get(COOKIE)?.value;
   if (!token) return null;
   const row = getDatabase().prepare(`
-    SELECT u.id, u.username, u.role, u.business_id, u.demo_business_id,
+    SELECT u.id, u.username, u.role, u.business_id,
       u.first_name, u.last_name, u.email, u.must_change_password
     FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = ? AND s.expires_at > ?
-  `).get(tokenHash(token), new Date().toISOString()) as Pick<UserRow, "id" | "username" | "role" | "business_id" | "demo_business_id" | "first_name" | "last_name" | "email" | "must_change_password"> | undefined;
+  `).get(tokenHash(token), new Date().toISOString()) as Pick<UserRow, "id" | "username" | "role" | "business_id" | "first_name" | "last_name" | "email" | "must_change_password"> | undefined;
   return row ? {
     id: row.id,
     username: row.username,
     role: row.role,
-    businessId: row.role === "admin" ? row.demo_business_id : row.business_id,
+    businessId: row.role === "merchant" ? row.business_id : null,
     firstName: row.first_name,
     lastName: row.last_name,
     email: row.email,
@@ -135,7 +145,7 @@ export async function requireAdmin() {
 
 export async function requireMerchant() {
   const session = await getSession();
-  if (!session || !session.businessId || !isBusinessActive(session.businessId)) redirect("/comercio/login");
+  if (session?.role !== "merchant" || !session.businessId || !isBusinessActive(session.businessId)) redirect("/comercio/login");
   return session;
 }
 

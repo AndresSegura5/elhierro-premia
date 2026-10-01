@@ -34,7 +34,7 @@ export const raceDefaults: Race[] = [
     couponQuantity: 1200,
     startDate: "2027-02-06",
     validityDays: 7,
-    color: "#2563eb",
+    color: "#071626",
     description: "La prueba reina: una travesía de costa a costa siguiendo el meridiano cero.",
     logoPath: "/branding/races/maraton-meridiano-2026.png",
     cardImagePath: "/images/races/meridiano.jpg",
@@ -137,8 +137,8 @@ export const siteContentDefaults = {
     titleLead: "Cómo funciona",
     titleAccent: "tu bono",
     steps: [
-      { icon: "ticket", title: "Recoge tu bono con el dorsal.", body: "Al retirar el dorsal de tu carrera recibes un bono de 30 € de esa prueba y válido en un comercio concreto de la isla. Los bonos se entregan sin asignarlos previamente a un dorsal." },
-      { icon: "store", title: "Visita el comercio asignado.", body: "Cada bono va ligado a un único comercio local, elegido para repartir el impacto económico entre los tres municipios." },
+      { icon: "ticket", title: "Recoge tu bono con el dorsal.", body: "Al retirar el dorsal de tu carrera recibes un bono de 30 € de esa prueba y válido en un comercio concreto de la isla." },
+      { icon: "store", title: "Visita el comercio asignado.", body: "Cada bono va ligado a un único comercio local. La asignación es equitativa y prioriza los negocios con menos bonos de esa carrera." },
       { icon: "qr", title: "Presenta tu código QR.", body: "En el comercio, muestra el QR o el código. Puedes gastar el saldo en varias compras, siempre en el mismo negocio y antes del vencimiento." },
     ],
     racesHeading: "Tu carrera, tu bono",
@@ -148,7 +148,7 @@ export const siteContentDefaults = {
       { q: "¿Qué pasa si no lo canjeo a tiempo?", a: "Cada carrera tiene una fecha de inicio y un plazo de vigencia propios. Consulta la fecha de vencimiento en tu bono." },
       { q: "¿Me pueden dar cambio o usarlo parcialmente?", a: "Puedes gastarlo en varias compras dentro del mismo comercio asignado, hasta agotar el saldo. No se entrega cambio en efectivo." },
       { q: "¿Puedo consultar el estado de mi bono?", a: "Sí, introduce tu código en el buscador para consultar el saldo, los gastos y la fecha de vencimiento." },
-      { q: "He perdido mi código, ¿qué hago?", a: "Comunícalo a la organización en el punto de información. Conserva el bono impreso: su código no se puede localizar mediante el dorsal porque no se vinculan entre sí al emitirlo." },
+      { q: "He perdido mi código, ¿qué hago?", a: "Si tienes una foto del código QR o del código alfanumérico, es suficiente: en el comercio pueden validar el bono escaneando el QR o introduciendo el código. Si no conservas ninguno, comunícalo a la organización en el punto de información; no es posible localizar el bono usando el dorsal porque no se vinculan al emitirlo." },
     ],
   },
 } as const;
