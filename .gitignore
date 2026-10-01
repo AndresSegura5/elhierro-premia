@@ -1,0 +1,22 @@
+.next/
+node_modules/
+.data/
+.vercel/
+supabase/.temp/
+.claude/
+*.tsbuildinfo
+.env*
+!.env.example
+
+# Local office and presentation files; not part of the web application.
+/Presupuesto_*.docx
+/Presupuesto_*.pdf
+/~$*
+/~WRL*
+/WhatsApp Ptt*.ogg
+/render_presentacion_final/
+/render_presentacion_qa/
+/create_personal_presentation.py
+/reformat_personal_presentation.py
+/tmp/
+/public/municipios-canarias.geojson
