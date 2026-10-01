@@ -6,7 +6,6 @@ backpack
 ball-american-football
 ball-baseball
 ball-basketball
-ball-bowling
 ball-football
 ball-tennis
 ball-volleyball
