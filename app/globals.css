@@ -4403,15 +4403,14 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
     border-radius: 0;
     background: transparent;
     color: #071626;
-    font-size: clamp(22px, 5.8vw, 28px);
+    font-size: clamp(28px, 7.5vw, 36px);
     font-weight: 500;
     line-height: 1.35;
     text-align: center;
   }
   .site-header--menu-open .main-nav a[aria-current="page"] { border: 0; background: transparent; color: var(--accent-dark); }
   .site-header--menu-open .main-nav > .nav-business:hover { border: 0; }
-  .site-header--menu-open .main-nav > a > svg,
-  .site-header--menu-open .nav-account-menu > summary > svg { width: 22px; height: 22px; flex-shrink: 0; }
+  .site-header--menu-open .main-nav svg { display: none; }
   .site-header--menu-open .nav-mobile-label { display: inline; }
   .site-header--menu-open .nav-account-menu { width: 100%; padding: 0; border: 0; }
   .site-header--menu-open .nav-account-popover { padding: 12px 0; text-align: center; }
