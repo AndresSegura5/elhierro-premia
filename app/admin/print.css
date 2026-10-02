@@ -1,0 +1,80 @@
+.coupon-print-page {
+  min-height: 100vh;
+  padding: 20px;
+  background: #e9eef3;
+}
+
+.coupon-print-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: min(100%, 210mm);
+  margin: 0 auto 16px;
+}
+
+.coupon-print-toolbar p { margin: 0; color: #536172; font-size: 13px; }
+
+.coupon-print-document { display: grid; gap: 20px; }
+
+.coupon-print-sheet {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: auto;
+  gap: 5mm 6mm;
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 16mm 10mm;
+  background: #fff;
+  box-shadow: 0 8px 30px rgb(7 22 38 / 12%);
+}
+
+.coupon-print-slot {
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  min-width: 0;
+}
+
+.coupon-print-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6mm; min-width: 0; }
+.coupon-print-sheet-paired { grid-template-columns: 1fr; }
+
+.coupon-print-face,
+.coupon-print-face > .coupon-voucher {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  min-width: 0;
+}
+
+.coupon-print-face > .coupon-voucher {
+  aspect-ratio: 3 / 1;
+  border-radius: 3mm;
+  box-shadow: none;
+}
+
+.coupon-print-face .coupon-voucher-back-image { object-fit: fill; }
+
+@media print {
+  @page { size: A4 portrait; margin: 0; }
+
+  html, body { background: #fff !important; }
+  body > footer,
+  .site-footer,
+  .coupon-print-toolbar { display: none !important; }
+  .coupon-print-page { min-height: 0; padding: 0; background: #fff; }
+  .coupon-print-document { display: block; }
+  .coupon-print-sheet {
+    width: 210mm;
+    height: 297mm;
+    min-height: 0;
+    margin: 0;
+    padding: 16mm 10mm;
+    box-shadow: none;
+    break-after: page;
+    page-break-after: always;
+  }
+  .coupon-print-sheet:last-child { break-after: auto; page-break-after: auto; }
+  .coupon-print-slot { break-inside: avoid; page-break-inside: avoid; }
+}

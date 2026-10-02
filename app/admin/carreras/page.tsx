@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChevronDown, CircleCheck, Clock3, FileDown, FileSpreadsheet, Printer, QrCode, Wallet } from "lucide-react";
+import { ChevronDown, CircleCheck, CircleDashed, Clock3, FileDown, FileSpreadsheet, Printer, QrCode, Wallet } from "lucide-react";
 import { AdminRaceSelector } from "@/components/AdminRaceSelector";
 import { DatePicker } from "@/components/DatePicker";
 import { ResetRaceCouponsButton } from "@/components/ResetRaceCouponsButton";
@@ -11,6 +11,7 @@ import { addDays, formatDate, formatDateTime, formatEuros } from "@/lib/bonos";
 import { demoWritesEnabled, listAllBusinesses, listRaceCoupons, listRaceRedemptions, listRaces } from "@/lib/store";
 import { generateRaceCoupons, saveRaceSettings } from "../actions";
 import { AdminSectionNav } from "@/components/AdminSectionNav";
+import { PrintCouponsLinks } from "@/components/PrintCouponsLinks";
 import "../admin.css";
 
 export const metadata: Metadata = { title: "Gestión de carreras y bonos | El Hierro Premia Deportistas" };
@@ -150,7 +151,8 @@ export default async function AdminPage({ searchParams }: {
             <section className="metric-grid admin-race-metrics" aria-label="Indicadores de la carrera">
               <article><QrCode size={22} aria-hidden="true" /><strong>{raceCoupons.length.toLocaleString("es-ES")}</strong><span>bonos emitidos</span></article>
               <article><Wallet size={22} aria-hidden="true" /><strong>{withBalance.toLocaleString("es-ES")}</strong><span>con saldo vigente</span></article>
-              <article><CircleCheck size={22} aria-hidden="true" /><strong>{exhausted.toLocaleString("es-ES")}</strong><span>agotados · {partial} parciales</span></article>
+              <article><CircleCheck size={22} aria-hidden="true" /><strong>{exhausted.toLocaleString("es-ES")}</strong><span>agotados totalmente</span></article>
+              <article><CircleDashed size={22} aria-hidden="true" /><strong>{partial.toLocaleString("es-ES")}</strong><span>agotados parcialmente</span></article>
             </section>
 
             <details id="gasto-por-comercio" className="admin-compact-details">
@@ -169,8 +171,7 @@ export default async function AdminPage({ searchParams }: {
                   {raceCoupons.length > 0 && <details className="admin-print-options">
                     <summary className="button"><Printer size={17} aria-hidden="true" />Imprimir bonos<ChevronDown size={16} aria-hidden="true" /></summary>
                     <div>
-                      <a href={`/api/admin/bonos-pdf?carrera=${encodeURIComponent(race.id)}&modo=una-cara`}>A una cara</a>
-                      <a href={`/api/admin/bonos-pdf?carrera=${encodeURIComponent(race.id)}&modo=dos-caras`}>A dos caras</a>
+                      <PrintCouponsLinks raceId={race.id} />
                     </div>
                   </details>}
                 </div>

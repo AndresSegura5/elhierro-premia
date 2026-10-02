@@ -7,7 +7,7 @@ import { formatDate, formatEuros } from "@/lib/bonos";
 import { localPhoneNumber, phoneLink } from "@/lib/phone";
 import { QRCodeCard } from "@/components/QRCodeCard";
 
-type Props = { coupon: Coupon; race: Race; business: Business };
+type Props = { coupon: Coupon; race: Race; business: Business; printMode?: "front" | "back" };
 
 const artwork: Record<string, { front: string; back: string }> = {
   bimbache: { front: "/branding/vouchers/bimbache-front.jpg", back: "/branding/vouchers/bimbache-back.jpg" },
@@ -15,7 +15,7 @@ const artwork: Record<string, { front: string; back: string }> = {
   bestial: { front: "/branding/vouchers/bestial-front-final.png", back: "/branding/vouchers/bestial-back-final.png" },
 };
 
-export function CouponVoucher({ coupon, race, business }: Props) {
+export function CouponVoucher({ coupon, race, business, printMode }: Props) {
   const [showBack, setShowBack] = useState(false);
   const raceLabel = (race.id + " " + race.name).toLocaleLowerCase();
   const designId = raceLabel.includes("bestial") ? "bestial" : raceLabel.includes("meridiano") ? "meridiano" : raceLabel.includes("bimbache") ? "bimbache" : race.id;
@@ -42,7 +42,7 @@ export function CouponVoucher({ coupon, race, business }: Props) {
   const value = <div className="coupon-voucher-value"><strong>{formatEuros(coupon.amountCents)}</strong><span>Bono canjeable</span></div>;
   const qr = (
     <div className="coupon-voucher-qr">
-      <QRCodeCard code={coupon.code} compact />
+      <QRCodeCard code={coupon.code} compact printOptimized={Boolean(printMode)} />
       <span className="coupon-voucher-code">{coupon.code}</span>
     </div>
   );
@@ -58,16 +58,18 @@ export function CouponVoucher({ coupon, race, business }: Props) {
               </foreignObject>
               <foreignObject x="1865" y="428" width="270" height="296">
                 <div className="coupon-voucher-svg-qr">
-                  <QRCodeCard code={coupon.code} compact />
+                  <QRCodeCard code={coupon.code} compact printOptimized={Boolean(printMode)} />
                   <span className="coupon-voucher-code"><span>{coupon.code.slice(0, 7)}</span><span>{coupon.code.slice(7)}</span></span>
                 </div>
               </foreignObject>
             </svg>
-            <div className="coupon-voucher-bestial-mobile">
-              <img className="coupon-voucher-mobile-art" src={images.front} alt="" />
-              <div className="coupon-voucher-bestial-business">{businessInfo}</div>
-              {qr}
-            </div>
+            {!printMode && (
+              <div className="coupon-voucher-bestial-mobile">
+                <img className="coupon-voucher-mobile-art" src={images.front} alt="" />
+                <div className="coupon-voucher-bestial-business">{businessInfo}</div>
+                {qr}
+              </div>
+            )}
           </>
         ) : (
           <>
@@ -84,7 +86,7 @@ export function CouponVoucher({ coupon, race, business }: Props) {
   const back = (
       <article className="coupon-voucher coupon-voucher-back coupon-voucher-face" aria-label={"Reverso del bono de " + race.name}>
         <img className="coupon-voucher-back-image" src={images.back} alt={"Reverso del bono: " + race.name} />
-        {designId === "bestial" && (
+        {designId === "bestial" && !printMode && (
           <div className="coupon-voucher-bestial-mobile coupon-voucher-back-mobile-info">
             <div className="coupon-voucher-bestial-business">{businessInfo}</div>
             {qr}
@@ -92,6 +94,14 @@ export function CouponVoucher({ coupon, race, business }: Props) {
         )}
       </article>
   );
+
+  if (printMode) {
+    return (
+      <div className={`coupon-voucher-stack coupon-voucher-${designId} coupon-voucher-print-face coupon-voucher-print-${printMode}`}>
+        {printMode === "front" ? front : back}
+      </div>
+    );
+  }
 
   if (designId !== "bestial") {
     return <div className={"coupon-voucher-stack coupon-voucher-" + designId}>

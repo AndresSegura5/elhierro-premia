@@ -7,6 +7,7 @@ type Props = {
   code: string;
   url?: string;
   compact?: boolean;
+  printOptimized?: boolean;
 };
 
 let blackCabildoLogoPromise: Promise<string> | undefined;
@@ -41,7 +42,7 @@ function getBlackCabildoLogo() {
   return blackCabildoLogoPromise;
 }
 
-export function QRCodeCard({ code, url, compact = false }: Props) {
+export function QRCodeCard({ code, url, compact = false, printOptimized = false }: Props) {
   const [qr, setQr] = useState("");
 
   useEffect(() => {
@@ -49,13 +50,13 @@ export function QRCodeCard({ code, url, compact = false }: Props) {
     let objectUrl: string | undefined;
 
     async function createQr() {
-      const { default: QRCodeStyling } = await import("qr-code-styling");
       const qrUrl = url ?? `${window.location.origin}/bono/${encodeURIComponent(code)}`;
+      const { default: QRCodeStyling } = await import("qr-code-styling");
       const blackCabildoLogo = await getBlackCabildoLogo();
       const styledQr = new QRCodeStyling({
-        width: 720,
-        height: 720,
-        type: "canvas",
+        width: compact ? 480 : 720,
+        height: compact ? 480 : 720,
+        type: printOptimized ? "svg" : "canvas",
         data: qrUrl,
         image: blackCabildoLogo,
         margin: 26,
@@ -84,7 +85,7 @@ export function QRCodeCard({ code, url, compact = false }: Props) {
           margin: 8
         }
       });
-      const blob = await styledQr.getRawData("png");
+      const blob = await styledQr.getRawData(printOptimized ? "svg" : "png");
       if (!(blob instanceof Blob)) return;
 
       objectUrl = URL.createObjectURL(blob);
@@ -100,7 +101,7 @@ export function QRCodeCard({ code, url, compact = false }: Props) {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [code, url]);
+  }, [code, printOptimized, url]);
 
   return (
     <article className={`qr-ticket${compact ? " qr-ticket-compact" : ""}`}>

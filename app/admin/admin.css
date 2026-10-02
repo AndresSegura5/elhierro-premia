@@ -241,7 +241,7 @@ body.has-business-modal { overflow: hidden; }
 .race-reset-acknowledgement { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 22px; color: var(--ink); font-size: 13px; line-height: 1.5; cursor: pointer; }
 .race-reset-acknowledgement input { flex: 0 0 auto; width: 17px; height: 17px; margin: 1px 0 0; accent-color: var(--accent); }
 .business-modal-actions .button:disabled { opacity: .5; cursor: not-allowed; }
-.admin-race-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 14px 0 18px; }
+.admin-race-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 14px 0 18px; }
 .admin-race-metrics article { min-height: 112px; padding: 17px 20px; }
 .admin-business-spend { margin: 0 0 14px; }
 .admin-business-spend .panel-title { margin-bottom: 14px; }
@@ -419,8 +419,22 @@ body.has-business-modal { overflow: hidden; }
 .admin-print-options > summary { display: flex; align-items: center; height: var(--button-height); min-height: var(--button-height); gap: 7px; padding: 0 12px; border-radius: 6px; font-size: 13px; list-style: none; cursor: pointer; }
 .admin-print-options > summary::-webkit-details-marker { display: none; }
 .admin-print-options > div { position: absolute; top: calc(100% + 6px); right: 0; z-index: 20; display: grid; min-width: 190px; padding: 5px; border: 1px solid var(--line); border-radius: 7px; background: #fff; box-shadow: 0 12px 30px rgb(7 22 38 / 14%); }
-.admin-print-options > div a { padding: 10px 12px; border-radius: 4px; color: var(--ink); font-size: 13px; font-weight: 600; text-decoration: none; }
-.admin-print-options > div a:hover { background: #f1f5f9; }
+.admin-print-options > div > button { display: flex; align-items: center; gap: 7px; width: 100%; padding: 10px 12px; border: 0; border-radius: 4px; background: transparent; color: var(--ink); font: 600 13px/1.2 var(--font-sans); text-align: left; cursor: pointer; }
+.admin-print-options > div > button:hover { background: #f1f5f9; }
+.admin-print-options > div > button:disabled { color: var(--muted); cursor: wait; }
+.admin-print-modal-backdrop { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 20px; background: rgb(7 22 38 / 58%); }
+.admin-print-modal { position: relative; width: min(100%, 480px); padding: 30px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); box-shadow: 0 24px 70px rgb(7 22 38 / 25%); text-align: center; }
+.admin-print-modal-close { position: absolute !important; top: 14px !important; right: 14px !important; left: auto !important; display: grid; width: 36px; height: 36px; place-items: center; padding: 0; border: 1px solid #cbd6e0; border-radius: 50%; background: #f4f7fa; color: var(--ink); cursor: pointer; }
+.admin-print-modal-close:hover { border-color: var(--accent); background: #fff4e8; color: var(--accent-dark); }
+.admin-print-modal-close:focus-visible { outline: 3px solid rgb(255 122 26 / 28%); outline-offset: 3px; }
+.admin-print-modal-icon { color: var(--accent-dark); }
+.admin-print-modal-icon--error { color: #a33825; }
+.admin-print-modal-icon.is-spinning { animation: admin-print-spin .8s linear infinite; }
+.admin-print-modal h2 { margin: 12px 0 10px; font-size: 21px; }
+.admin-print-modal p { margin: 0 auto; max-width: 390px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.admin-print-modal-progress { margin-top: 10px !important; font-size: 12px !important; }
+.admin-print-modal-actions { display: flex; justify-content: center; gap: 10px; margin-top: 22px; }
+@keyframes admin-print-spin { to { transform: rotate(360deg); } }
 .admin-main .admin-grid {
   padding-top: 38px;
 }
