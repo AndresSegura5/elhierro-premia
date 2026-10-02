@@ -6,6 +6,7 @@ import { Download } from "lucide-react";
 type Props = {
   code: string;
   url?: string;
+  compact?: boolean;
 };
 
 let blackCabildoLogoPromise: Promise<string> | undefined;
@@ -40,7 +41,7 @@ function getBlackCabildoLogo() {
   return blackCabildoLogoPromise;
 }
 
-export function QRCodeCard({ code, url }: Props) {
+export function QRCodeCard({ code, url, compact = false }: Props) {
   const [qr, setQr] = useState("");
 
   useEffect(() => {
@@ -102,14 +103,14 @@ export function QRCodeCard({ code, url }: Props) {
   }, [code, url]);
 
   return (
-    <article className="qr-ticket">
+    <article className={`qr-ticket${compact ? " qr-ticket-compact" : ""}`}>
       <div className="qr-frame">
         {qr ? <img src={qr} alt="Código QR del bono" /> : <div className="qr-placeholder" />}
       </div>
-      <a download={`${code}.png`} href={qr} className="button subtle" aria-disabled={!qr}>
+      {!compact && <a download={`${code}.png`} href={qr} className="button subtle" aria-disabled={!qr}>
         <Download size={17} aria-hidden="true" />
         Descargar
-      </a>
+      </a>}
     </article>
   );
 }

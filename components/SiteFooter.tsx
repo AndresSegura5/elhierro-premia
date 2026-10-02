@@ -10,7 +10,7 @@ export function SiteFooter() {
           <span aria-hidden="true" />
           <strong>Ganamos <em>todos</em><br />Deporte y comercio</strong>
         </div>
-        <p>Deporte que conecta. Comercio que da vida.</p>
+        <p>Deporte que conecta.<br />Comercio que da vida.</p>
       </div>
       <nav className="site-footer-map" aria-label="Árbol de páginas">
         <strong>Páginas</strong>

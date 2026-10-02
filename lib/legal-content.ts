@@ -27,7 +27,7 @@ export const legalContentDefaults: Record<LegalContentKey, LegalContent> = {
   "legal.notice": {
     title: "Aviso legal",
     summary: "Titularidad del sitio y condiciones de uso de El Hierro Premia Deportistas.",
-    updatedAt: "2026-10-01",
+    updatedAt: "2026-10-02",
     sections: [
       {
         id: "titular", title: "Titular y contacto",
@@ -75,6 +75,7 @@ export const legalContentDefaults: Record<LegalContentKey, LegalContent> = {
         id: "contenidos", title: "Contenidos y enlaces",
         paragraphs: [
           "Los textos, fotografías, logotipos, diseños y demás contenidos pueden estar sujetos a derechos del Cabildo o de terceros. Su reutilización debe respetar los derechos aplicables y, cuando sea necesaria, contar con la autorización de su titular.",
+          "Algunas imágenes de carácter ilustrativo publicadas en el sitio pueden haber sido generadas, adaptadas o editadas con herramientas de inteligencia artificial. Estas imágenes se utilizan como apoyo visual y no deben interpretarse como una reproducción exacta de establecimientos, productos, servicios o personas reales.",
           "Los datos de los comercios pueden actualizarse. Para confirmar horarios, disponibilidad o servicios, contacta con el establecimiento. Los mapas, rutas y otros enlaces externos corresponden a servicios de terceros sujetos a sus propias condiciones.",
           "El servicio puede interrumpirse por mantenimiento o incidencias técnicas. Si detectas un error en la información o en tu bono, comunícalo al contacto del programa.",
         ],
