@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { History, KeyRound, QrCode, ShieldAlert, Trash2 } from "lucide-react";
+import { History, KeyRound, QrCode, ReceiptText, ShieldAlert, Trash2 } from "lucide-react";
 import { AdminSectionNav } from "@/components/AdminSectionNav";
 import { Header } from "@/components/Header";
 import { InteractiveTable, type InteractiveTableColumn, type InteractiveTableRow } from "@/components/InteractiveTable";
 import { formatDateTime, formatEuros } from "@/lib/bonos";
 import { requireSuperAdmin } from "@/lib/auth";
-import { listAllCouponAudit, listAuditEvents, listLoginAudit } from "@/lib/store";
+import { listAllCouponAudit, listAllRedemptionAudit, listAuditEvents, listLoginAudit } from "@/lib/store";
 import "../admin.css";
 
 export const metadata: Metadata = { title: "Supervisión | El Hierro Premia Deportistas" };
@@ -27,6 +27,7 @@ const eventColumns: InteractiveTableColumn[] = [
 ];
 
 const couponColumns: InteractiveTableColumn[] = [
+  { key: "created", label: "Generado" },
   { key: "code", label: "Bono" },
   { key: "race", label: "Carrera" },
   { key: "business", label: "Comercio" },
@@ -35,9 +36,18 @@ const couponColumns: InteractiveTableColumn[] = [
   { key: "deleted", label: "Eliminado" },
 ];
 
+const redemptionColumns: InteractiveTableColumn[] = [
+  { key: "date", label: "Fecha y hora" },
+  { key: "race", label: "Carrera" },
+  { key: "business", label: "Comercio" },
+  { key: "code", label: "Bono" },
+  { key: "amount", label: "Importe" },
+  { key: "balance", label: "Saldo posterior" },
+];
+
 export default async function SupervisionPage() {
   const session = await requireSuperAdmin();
-  const [loginEvents, auditEvents, coupons] = await Promise.all([listLoginAudit(), listAuditEvents(), listAllCouponAudit()]);
+  const [loginEvents, auditEvents, coupons, redemptions] = await Promise.all([listLoginAudit(), listAuditEvents(), listAllCouponAudit(), listAllRedemptionAudit()]);
   const deletedCoupons = coupons.filter((coupon) => coupon.deletedAt);
 
   const loginRows: InteractiveTableRow[] = loginEvents.map((event) => {
@@ -54,11 +64,19 @@ export default async function SupervisionPage() {
   });
 
   const couponRows: InteractiveTableRow[] = coupons.map((coupon) => {
+    const created = formatDateTime(coupon.createdAt);
     const state = coupon.deletedAt ? "Eliminado" : "Activo";
     const deleted = coupon.deletedAt ? `${formatDateTime(coupon.deletedAt)} · ${coupon.deletedByUsername ?? "Usuario desconocido"}` : "—";
     const spent = formatEuros(coupon.usedCents);
     const code = coupon.deletedAt ? <span className="mono">{coupon.code}</span> : <Link className="mono" href={`/bono/${coupon.code}`}>{coupon.code}</Link>;
-    return { key: coupon.code, searchValues: { code: coupon.code, race: coupon.raceName, business: coupon.businessName, spent, state, deleted }, sortValues: { code: coupon.code, race: coupon.raceName, business: coupon.businessName, spent: coupon.usedCents, state, deleted }, cells: { code, race: coupon.raceName, business: coupon.businessName, spent, state: <span className={coupon.deletedAt ? "audit-status audit-status--deleted" : "audit-status"}>{state}</span>, deleted } };
+    return { key: coupon.code, searchValues: { created, code: coupon.code, race: coupon.raceName, business: coupon.businessName, spent, state, deleted }, sortValues: { created: coupon.createdAt, code: coupon.code, race: coupon.raceName, business: coupon.businessName, spent: coupon.usedCents, state, deleted }, cells: { created, code, race: coupon.raceName, business: coupon.businessName, spent, state: <span className={coupon.deletedAt ? "audit-status audit-status--deleted" : "audit-status"}>{state}</span>, deleted } };
+  });
+
+  const redemptionRows: InteractiveTableRow[] = redemptions.map((redemption) => {
+    const date = formatDateTime(redemption.createdAt);
+    const amount = formatEuros(redemption.amountCents);
+    const balance = formatEuros(redemption.balanceAfterCents);
+    return { key: String(redemption.id), searchValues: { date, race: redemption.raceName, business: redemption.businessName, code: redemption.code, amount, balance }, sortValues: { date: redemption.createdAt, race: redemption.raceName, business: redemption.businessName, code: redemption.code, amount: redemption.amountCents, balance: redemption.balanceAfterCents }, cells: { date, race: redemption.raceName, business: redemption.businessName, code: <span className="mono">{redemption.code}</span>, amount, balance } };
   });
 
   return <>
@@ -78,6 +96,7 @@ export default async function SupervisionPage() {
         <article><History size={22} aria-hidden="true" /><strong>{auditEvents.length.toLocaleString("es-ES")}</strong><span>acciones registradas</span></article>
         <article><Trash2 size={22} aria-hidden="true" /><strong>{deletedCoupons.length.toLocaleString("es-ES")}</strong><span>bonos archivados</span></article>
         <article><QrCode size={22} aria-hidden="true" /><strong>{coupons.length.toLocaleString("es-ES")}</strong><span>bonos conservados</span></article>
+        <article><ReceiptText size={22} aria-hidden="true" /><strong>{redemptions.length.toLocaleString("es-ES")}</strong><span>movimientos registrados</span></article>
       </section>
 
       <section className="admin-supervision-panel">
@@ -93,6 +112,11 @@ export default async function SupervisionPage() {
       <section className="admin-supervision-panel">
         <div className="admin-supervision-heading"><div><p className="eyebrow">Retención</p><h2><QrCode size={20} aria-hidden="true" />Todos los bonos</h2></div><small>Los archivados permanecen visibles aquí</small></div>
         {couponRows.length ? <InteractiveTable columns={couponColumns} rows={couponRows} ariaLabel="Todos los bonos, incluidos los archivados" label="bonos" initialSort={{ key: "deleted", direction: "desc" }} /> : <p className="admin-table-empty">Todavía no hay bonos registrados.</p>}
+      </section>
+
+      <section className="admin-supervision-panel">
+        <div className="admin-supervision-heading"><div><p className="eyebrow">Histórico económico</p><h2><ReceiptText size={20} aria-hidden="true" />Movimientos de gasto</h2></div><small>Todos los movimientos, incluso de bonos archivados</small></div>
+        {redemptionRows.length ? <InteractiveTable columns={redemptionColumns} rows={redemptionRows} ariaLabel="Historial completo de movimientos" label="movimientos" initialSort={{ key: "date", direction: "desc" }} /> : <p className="admin-table-empty">Todavía no hay movimientos registrados.</p>}
       </section>
     </main>
   </>;

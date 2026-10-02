@@ -5,10 +5,10 @@ import { DatabaseSync } from "node:sqlite";
 import { addDays, BONO_CENTS, couponStatus, todayInCanary } from "./bonos";
 import { chooseLeastAssignedBusiness } from "./coupon-assignment";
 import { businesses, raceDefaults } from "./data";
-import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, LoginAuditRecord, ManagedBusiness, Municipality, Race, Redemption } from "./types";
+import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, LoginAuditRecord, ManagedBusiness, Municipality, Race, Redemption, RedemptionAuditRecord } from "./types";
 
 type RaceRow = { id: string; coupon_quantity: number; start_date: string; validity_days: number };
-type CouponRow = { code: string; race_id: string; business_id: string; amount_cents: number; used_cents: number; deleted_at: string | null; deleted_by: number | null };
+type CouponRow = { code: string; race_id: string; business_id: string; amount_cents: number; used_cents: number; created_at: string; deleted_at: string | null; deleted_by: number | null };
 type RedemptionRow = { id: number; code: string; business_id: string; amount_cents: number; balance_after_cents: number; created_at: string };
 type BusinessRow = {
   id: string;
@@ -322,13 +322,13 @@ export function listRaceCoupons(raceId: string) {
 export function listAllCouponAudit(): CouponAuditRecord[] {
   const rows = getDatabase().prepare(`
     SELECT c.code, c.race_id, r.name AS race_name, c.business_id, b.name AS business_name,
-      c.amount_cents, c.used_cents, c.deleted_at, u.username AS deleted_by_username
+      c.amount_cents, c.used_cents, c.created_at, c.deleted_at, u.username AS deleted_by_username
     FROM coupons c
     JOIN races r ON r.id = c.race_id
     LEFT JOIN businesses b ON b.id = c.business_id
     LEFT JOIN users u ON u.id = c.deleted_by
     ORDER BY (c.deleted_at IS NULL), c.deleted_at DESC, c.rowid DESC
-  `).all() as Array<{ code: string; race_id: string; race_name: string; business_id: string; business_name: string | null; amount_cents: number; used_cents: number; deleted_at: string | null; deleted_by_username: string | null }>;
+  `).all() as Array<{ code: string; race_id: string; race_name: string; business_id: string; business_name: string | null; amount_cents: number; used_cents: number; created_at: string; deleted_at: string | null; deleted_by_username: string | null }>;
   return rows.map((row) => ({
     code: row.code,
     raceId: row.race_id,
@@ -337,9 +337,23 @@ export function listAllCouponAudit(): CouponAuditRecord[] {
     businessName: row.business_name ?? "Comercio eliminado",
     amountCents: row.amount_cents,
     usedCents: row.used_cents,
+    createdAt: row.created_at,
     deletedAt: row.deleted_at,
     deletedByUsername: row.deleted_by_username,
   }));
+}
+
+export function listAllRedemptionAudit(): RedemptionAuditRecord[] {
+  const rows = getDatabase().prepare(`
+    SELECT r.id, r.code, c.race_id, races.name AS race_name, r.business_id,
+      b.name AS business_name, r.amount_cents, r.balance_after_cents, r.created_at
+    FROM redemptions r
+    JOIN coupons c ON c.code = r.code
+    JOIN races ON races.id = c.race_id
+    LEFT JOIN businesses b ON b.id = r.business_id
+    ORDER BY r.created_at DESC, r.id DESC
+  `).all() as Array<{ id: number; code: string; race_id: string; race_name: string; business_id: string; business_name: string | null; amount_cents: number; balance_after_cents: number; created_at: string }>;
+  return rows.map((row) => ({ id: row.id, code: row.code, raceId: row.race_id, raceName: row.race_name, businessId: row.business_id, businessName: row.business_name ?? "Comercio eliminado", amountCents: row.amount_cents, balanceAfterCents: row.balance_after_cents, createdAt: row.created_at }));
 }
 
 export function listRaceRedemptions(raceId: string) {

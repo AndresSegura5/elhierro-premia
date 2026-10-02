@@ -63,8 +63,21 @@ export type CouponAuditRecord = {
   businessName: string;
   amountCents: number;
   usedCents: number;
+  createdAt: string;
   deletedAt: string | null;
   deletedByUsername: string | null;
+};
+
+export type RedemptionAuditRecord = {
+  id: number;
+  code: string;
+  raceId: string;
+  raceName: string;
+  businessId: string;
+  businessName: string;
+  amountCents: number;
+  balanceAfterCents: number;
+  createdAt: string;
 };
 
 export type LoginAuditRecord = {

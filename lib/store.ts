@@ -8,7 +8,7 @@ import { couponRules, siteContentDefaults } from "./data";
 import { legalContentDefaults } from "./legal-content";
 import { chooseLeastAssignedBusiness } from "./coupon-assignment";
 import { businessCategories } from "./business-categories";
-import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, ManagedBusiness, Municipality, Race, Redemption, LoginAuditRecord } from "./types";
+import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, ManagedBusiness, Municipality, Race, Redemption, RedemptionAuditRecord, LoginAuditRecord } from "./types";
 
 type RaceRecord = {
   id: string;
@@ -38,7 +38,7 @@ type BusinessRecord = {
   image: string;
   active: boolean;
 };
-type CouponRecord = { code: string; race_id: string; business_id: string; amount_cents: number; used_cents: number; deleted_at: string | Date | null; deleted_by: number | null };
+type CouponRecord = { code: string; race_id: string; business_id: string; amount_cents: number; used_cents: number; created_at: string | Date; deleted_at: string | Date | null; deleted_by: number | null };
 type RedemptionRecord = { id: number; code: string; business_id: string; amount_cents: number; balance_after_cents: number; created_at: string | Date };
 
 
@@ -226,9 +226,9 @@ export async function listRaceCoupons(raceId: string): Promise<Coupon[]> {
 
 export async function listAllCouponAudit(): Promise<CouponAuditRecord[]> {
   if (!hasPostgresDatabase()) return sqliteStore.listAllCouponAudit();
-  const rows = await getPostgres()<Array<{ code: string; race_id: string; race_name: string; business_id: string; business_name: string | null; amount_cents: number; used_cents: number; deleted_at: string | Date | null; deleted_by_username: string | null }>>`
+  const rows = await getPostgres()<Array<{ code: string; race_id: string; race_name: string; business_id: string; business_name: string | null; amount_cents: number; used_cents: number; created_at: string | Date; deleted_at: string | Date | null; deleted_by_username: string | null }>>`
     SELECT c.code, c.race_id, r.name AS race_name, c.business_id, b.name AS business_name,
-      c.amount_cents, c.used_cents, c.deleted_at, u.username AS deleted_by_username
+      c.amount_cents, c.used_cents, c.created_at, c.deleted_at, u.username AS deleted_by_username
     FROM public.coupons c
     JOIN public.races r ON r.id = c.race_id
     LEFT JOIN public.businesses b ON b.id = c.business_id
@@ -243,9 +243,24 @@ export async function listAllCouponAudit(): Promise<CouponAuditRecord[]> {
     businessName: row.business_name ?? "Comercio eliminado",
     amountCents: Number(row.amount_cents),
     usedCents: Number(row.used_cents),
+    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
     deletedAt: row.deleted_at ? (row.deleted_at instanceof Date ? row.deleted_at.toISOString() : String(row.deleted_at)) : null,
     deletedByUsername: row.deleted_by_username,
   }));
+}
+
+export async function listAllRedemptionAudit(): Promise<RedemptionAuditRecord[]> {
+  if (!hasPostgresDatabase()) return sqliteStore.listAllRedemptionAudit();
+  const rows = await getPostgres()<Array<{ id: number; code: string; race_id: string; race_name: string; business_id: string; business_name: string | null; amount_cents: number; balance_after_cents: number; created_at: string | Date }>>`
+    SELECT r.id, r.code, c.race_id, races.name AS race_name, r.business_id,
+      b.name AS business_name, r.amount_cents, r.balance_after_cents, r.created_at
+    FROM public.redemptions r
+    JOIN public.coupons c ON c.code = r.code
+    JOIN public.races races ON races.id = c.race_id
+    LEFT JOIN public.businesses b ON b.id = r.business_id
+    ORDER BY r.created_at DESC, r.id DESC
+  `;
+  return rows.map((row) => ({ id: Number(row.id), code: row.code, raceId: row.race_id, raceName: row.race_name, businessId: row.business_id, businessName: row.business_name ?? "Comercio eliminado", amountCents: Number(row.amount_cents), balanceAfterCents: Number(row.balance_after_cents), createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at) }));
 }
 
 export async function listRaceRedemptions(raceId: string): Promise<Redemption[]> {
