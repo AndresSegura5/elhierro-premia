@@ -5672,6 +5672,7 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
   .site-header--menu-open .nav-admin .nav-mobile-menu-arrow { display: block !important; }
   .site-header--menu-open .nav-admin .nav-mobile-menu-icon { color: var(--ink); }
   .site-header--menu-open .nav-mobile-label { display: inline; font-size: inherit !important; font-weight: 500; }
+  .site-header--menu-open .nav-account-menu .nav-account-popover form { display: none; }
 
   .site-header--menu-open .nav-mobile-logout {
     display: block;
