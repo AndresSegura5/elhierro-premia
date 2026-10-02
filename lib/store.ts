@@ -8,7 +8,7 @@ import { couponRules, siteContentDefaults } from "./data";
 import { legalContentDefaults } from "./legal-content";
 import { chooseLeastAssignedBusiness } from "./coupon-assignment";
 import { businessCategories } from "./business-categories";
-import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, ManagedBusiness, Municipality, Race, Redemption, RedemptionAuditRecord, LoginAuditRecord } from "./types";
+import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, ManagedBusiness, MerchantAccountAuditRecord, Municipality, Race, Redemption, RedemptionAuditRecord, LoginAuditRecord } from "./types";
 
 type RaceRecord = {
   id: string;
@@ -279,6 +279,20 @@ export async function listLoginAudit(): Promise<LoginAuditRecord[]> {
     FROM public.login_events ORDER BY signed_in_at DESC, id DESC
   `;
   return rows.map((row) => ({ id: Number(row.id), userId: Number(row.user_id), username: row.username, role: row.role, signedInAt: row.signed_in_at instanceof Date ? row.signed_in_at.toISOString() : String(row.signed_in_at), signedOutAt: row.signed_out_at ? (row.signed_out_at instanceof Date ? row.signed_out_at.toISOString() : String(row.signed_out_at)) : null }));
+}
+
+export async function listMerchantAccountAudit(): Promise<MerchantAccountAuditRecord[]> {
+  if (!hasPostgresDatabase()) return sqliteStore.listMerchantAccountAudit();
+  const rows = await getPostgres()<Array<{ id: number; username: string; business_id: string; business_name: string; archived_at: string | Date | null; archived_by_username: string | null }>>`
+    SELECT u.id, u.username, u.business_id, b.name AS business_name,
+      u.archived_at, archived.username AS archived_by_username
+    FROM public.users u
+    JOIN public.businesses b ON b.id = u.business_id
+    LEFT JOIN public.users archived ON archived.id = u.archived_by
+    WHERE u.role = 'merchant'
+    ORDER BY CASE WHEN u.archived_at IS NULL THEN 0 ELSE 1 END, lower(b.name), lower(u.username)
+  `;
+  return rows.map((row) => ({ id: Number(row.id), username: row.username, businessId: row.business_id, businessName: row.business_name, archivedAt: row.archived_at ? (row.archived_at instanceof Date ? row.archived_at.toISOString() : String(row.archived_at)) : null, archivedByUsername: row.archived_by_username }));
 }
 
 export async function listAuditEvents(): Promise<AuditEventRecord[]> {

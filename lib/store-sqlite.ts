@@ -5,7 +5,7 @@ import { DatabaseSync } from "node:sqlite";
 import { addDays, BONO_CENTS, couponStatus, todayInCanary } from "./bonos";
 import { chooseLeastAssignedBusiness } from "./coupon-assignment";
 import { businesses, raceDefaults } from "./data";
-import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, LoginAuditRecord, ManagedBusiness, Municipality, Race, Redemption, RedemptionAuditRecord } from "./types";
+import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, LoginAuditRecord, ManagedBusiness, MerchantAccountAuditRecord, Municipality, Race, Redemption, RedemptionAuditRecord } from "./types";
 
 type RaceRow = { id: string; coupon_quantity: number; start_date: string; validity_days: number };
 type CouponRow = { code: string; race_id: string; business_id: string; amount_cents: number; used_cents: number; created_at: string; deleted_at: string | null; deleted_by: number | null };
@@ -113,7 +113,9 @@ export function getDatabase() {
       business_id TEXT UNIQUE,
       demo_business_id TEXT,
       failed_attempts INTEGER NOT NULL DEFAULT 0,
-      locked_until TEXT
+      locked_until TEXT,
+      archived_at TEXT,
+      archived_by INTEGER
     );
     CREATE TABLE IF NOT EXISTS businesses (
       id TEXT PRIMARY KEY,
@@ -183,6 +185,8 @@ export function getDatabase() {
   if (!userColumns.some((column) => column.name === "email")) db.exec("ALTER TABLE users ADD COLUMN email TEXT");
   if (!userColumns.some((column) => column.name === "must_change_password")) db.exec("ALTER TABLE users ADD COLUMN must_change_password INTEGER NOT NULL DEFAULT 0");
   if (!userColumns.some((column) => column.name === "is_superuser")) db.exec("ALTER TABLE users ADD COLUMN is_superuser INTEGER NOT NULL DEFAULT 0");
+  if (!userColumns.some((column) => column.name === "archived_at")) db.exec("ALTER TABLE users ADD COLUMN archived_at TEXT");
+  if (!userColumns.some((column) => column.name === "archived_by")) db.exec("ALTER TABLE users ADD COLUMN archived_by INTEGER");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique ON users(email COLLATE NOCASE) WHERE email IS NOT NULL");
   const sessionColumns = db.prepare("PRAGMA table_info(sessions)").all() as Array<{ name: string }>;
   if (!sessionColumns.some((column) => column.name === "created_at")) db.exec("ALTER TABLE sessions ADD COLUMN created_at TEXT");
@@ -369,6 +373,19 @@ export function listLoginAudit(): LoginAuditRecord[] {
     SELECT id, user_id, username, role, signed_in_at, signed_out_at
     FROM login_events ORDER BY signed_in_at DESC, id DESC
   `).all() as LoginAuditRecord[];
+}
+
+export function listMerchantAccountAudit(): MerchantAccountAuditRecord[] {
+  const rows = getDatabase().prepare(`
+    SELECT u.id, u.username, u.business_id, b.name AS business_name,
+      u.archived_at, archived.username AS archived_by_username
+    FROM users u
+    JOIN businesses b ON b.id = u.business_id
+    LEFT JOIN users archived ON archived.id = u.archived_by
+    WHERE u.role = 'merchant'
+    ORDER BY CASE WHEN u.archived_at IS NULL THEN 0 ELSE 1 END, lower(b.name), lower(u.username)
+  `).all() as Array<{ id: number; username: string; business_id: string; business_name: string; archived_at: string | null; archived_by_username: string | null }>;
+  return rows.map((row) => ({ id: row.id, username: row.username, businessId: row.business_id, businessName: row.business_name, archivedAt: row.archived_at, archivedByUsername: row.archived_by_username }));
 }
 
 export function listAuditEvents(): AuditEventRecord[] {

@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { History, KeyRound, QrCode, ReceiptText, ShieldAlert, Trash2 } from "lucide-react";
+import { History, KeyRound, QrCode, ReceiptText, ShieldAlert, Store, Trash2 } from "lucide-react";
 import { AdminSectionNav } from "@/components/AdminSectionNav";
 import { Header } from "@/components/Header";
 import { InteractiveTable, type InteractiveTableColumn, type InteractiveTableRow } from "@/components/InteractiveTable";
 import { formatDateTime, formatEuros } from "@/lib/bonos";
 import { requireSuperAdmin } from "@/lib/auth";
-import { listAllCouponAudit, listAllRedemptionAudit, listAuditEvents, listLoginAudit } from "@/lib/store";
+import { listAllCouponAudit, listAllRedemptionAudit, listAuditEvents, listLoginAudit, listMerchantAccountAudit } from "@/lib/store";
 import "../admin.css";
 
 export const metadata: Metadata = { title: "Supervisión | El Hierro Premia Deportistas" };
@@ -45,9 +45,16 @@ const redemptionColumns: InteractiveTableColumn[] = [
   { key: "balance", label: "Saldo posterior" },
 ];
 
+const accountColumns: InteractiveTableColumn[] = [
+  { key: "business", label: "Comercio" },
+  { key: "username", label: "Usuario" },
+  { key: "state", label: "Estado" },
+  { key: "archived", label: "Archivado" },
+];
+
 export default async function SupervisionPage() {
   const session = await requireSuperAdmin();
-  const [loginEvents, auditEvents, coupons, redemptions] = await Promise.all([listLoginAudit(), listAuditEvents(), listAllCouponAudit(), listAllRedemptionAudit()]);
+  const [loginEvents, auditEvents, coupons, redemptions, merchantAccounts] = await Promise.all([listLoginAudit(), listAuditEvents(), listAllCouponAudit(), listAllRedemptionAudit(), listMerchantAccountAudit()]);
   const deletedCoupons = coupons.filter((coupon) => coupon.deletedAt);
 
   const loginRows: InteractiveTableRow[] = loginEvents.map((event) => {
@@ -59,13 +66,13 @@ export default async function SupervisionPage() {
 
   const eventRows: InteractiveTableRow[] = auditEvents.map((event) => {
     const date = formatDateTime(event.createdAt);
-    const action = event.action === "delete_coupons" ? "Borrado de bonos" : event.action;
+    const action = event.action === "delete_coupons" ? "Bonos archivados" : event.action === "delete_business" ? "Comercio archivado" : event.action;
     return { key: String(event.id), searchValues: { date, user: event.actorUsername ?? "Sistema", action, details: event.details }, sortValues: { date: event.createdAt, user: event.actorUsername ?? "", action, details: event.details }, cells: { date, user: event.actorUsername ?? "Sistema", action: <strong>{action}</strong>, details: event.details } };
   });
 
   const couponRows: InteractiveTableRow[] = coupons.map((coupon) => {
     const created = formatDateTime(coupon.createdAt);
-    const state = coupon.deletedAt ? "Eliminado" : "Activo";
+    const state = coupon.deletedAt ? "Archivado" : "Activo";
     const deleted = coupon.deletedAt ? `${formatDateTime(coupon.deletedAt)} · ${coupon.deletedByUsername ?? "Usuario desconocido"}` : "—";
     const spent = formatEuros(coupon.usedCents);
     const code = coupon.deletedAt ? <span className="mono">{coupon.code}</span> : <Link className="mono" href={`/bono/${coupon.code}`}>{coupon.code}</Link>;
@@ -77,6 +84,12 @@ export default async function SupervisionPage() {
     const amount = formatEuros(redemption.amountCents);
     const balance = formatEuros(redemption.balanceAfterCents);
     return { key: String(redemption.id), searchValues: { date, race: redemption.raceName, business: redemption.businessName, code: redemption.code, amount, balance }, sortValues: { date: redemption.createdAt, race: redemption.raceName, business: redemption.businessName, code: redemption.code, amount: redemption.amountCents, balance: redemption.balanceAfterCents }, cells: { date, race: redemption.raceName, business: redemption.businessName, code: <span className="mono">{redemption.code}</span>, amount, balance } };
+  });
+
+  const accountRows: InteractiveTableRow[] = merchantAccounts.map((account) => {
+    const state = account.archivedAt ? "Archivada" : "Activa";
+    const archived = account.archivedAt ? `${formatDateTime(account.archivedAt)} · ${account.archivedByUsername ?? "Sistema"}` : "—";
+    return { key: String(account.id), searchValues: { business: account.businessName, username: account.username, state, archived }, sortValues: { business: account.businessName, username: account.username, state, archived }, cells: { business: <strong>{account.businessName}</strong>, username: <span className="mono">{account.username}</span>, state: <span className={account.archivedAt ? "audit-status audit-status--deleted" : "audit-status"}>{state}</span>, archived } };
   });
 
   return <>
@@ -102,6 +115,11 @@ export default async function SupervisionPage() {
       <section className="admin-supervision-panel">
         <div className="admin-supervision-heading"><div><p className="eyebrow">Trazabilidad</p><h2><KeyRound size={20} aria-hidden="true" />Accesos</h2></div><small>Histórico completo de inicios</small></div>
         {loginRows.length ? <InteractiveTable columns={loginColumns} rows={loginRows} ariaLabel="Historial de accesos" label="accesos" initialSort={{ key: "date", direction: "desc" }} /> : <p className="admin-table-empty">Todavía no hay accesos registrados.</p>}
+      </section>
+
+      <section className="admin-supervision-panel">
+        <div className="admin-supervision-heading"><div><p className="eyebrow">Retención de accesos</p><h2><Store size={20} aria-hidden="true" />Cuentas de comercios</h2></div><small>Las cuentas archivadas siguen siendo consultables</small></div>
+        {accountRows.length ? <InteractiveTable columns={accountColumns} rows={accountRows} ariaLabel="Historial de cuentas de comercios" label="cuentas" initialSort={{ key: "state", direction: "asc" }} /> : <p className="admin-table-empty">Todavía no hay cuentas de comercios registradas.</p>}
       </section>
 
       <section className="admin-supervision-panel">

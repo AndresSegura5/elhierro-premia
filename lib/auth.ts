@@ -28,6 +28,8 @@ type UserRow = {
   business_id: string | null;
   failed_attempts: number;
   locked_until: string | Date | null;
+  archived_at: string | Date | null;
+  archived_by: number | null;
 };
 
 export type SessionUser = Pick<UserRow, "id" | "username" | "role"> & {
@@ -111,7 +113,7 @@ export async function signInDetailed(username: string, password: string, role: R
   const sql = getPostgres();
   const rows = role === "admin"
     ? await sql<UserRow[]>`SELECT * FROM public.users WHERE (lower(username) = ${normalized} OR lower(email) = ${normalized}) AND role = 'admin'`
-    : await sql<UserRow[]>`SELECT * FROM public.users WHERE lower(username) = ${normalized} AND role = 'merchant'`;
+    : await sql<UserRow[]>`SELECT * FROM public.users WHERE lower(username) = ${normalized} AND role = 'merchant' AND archived_at IS NULL`;
   const user = rows[0];
   if (!user) {
     await passwordMatches(password, `scrypt:unknown-account:${"0".repeat(128)}`);
@@ -161,6 +163,7 @@ export async function getSession(): Promise<SessionUser | null> {
       u.first_name, u.last_name, u.email, u.must_change_password, u.is_superuser
     FROM public.sessions s JOIN public.users u ON u.id = s.user_id
     WHERE s.token_hash = ${tokenHash(token)} AND s.expires_at > now()
+      AND (u.role = 'admin' OR u.archived_at IS NULL)
   `;
   return row ? mapSession(row) : null;
 }
@@ -282,7 +285,7 @@ export async function changeAdminPassword(currentPassword: string, newPassword: 
 
 export async function listMerchantAccounts() {
   if (!hasPostgresDatabase()) return sqliteAuth.listMerchantAccounts();
-  return getPostgres()<Array<{ username: string; business_id: string }>>`SELECT username, business_id FROM public.users WHERE role = 'merchant'`;
+  return getPostgres()<Array<{ username: string; business_id: string }>>`SELECT username, business_id FROM public.users WHERE role = 'merchant' AND archived_at IS NULL`;
 }
 
 async function uniqueMerchantUsername(name: string, exceptUserId?: number) {
@@ -336,7 +339,9 @@ export async function deleteBusinessAndAccess(businessId: string, actor?: { id: 
     if (!business) throw new Error("No se encontró el comercio que quieres borrar.");
     const [coupons] = await tx`SELECT count(*)::int AS total FROM public.coupons WHERE business_id = ${businessId}`;
     await tx`DELETE FROM public.sessions WHERE user_id IN (SELECT id FROM public.users WHERE business_id = ${businessId} AND role = 'merchant')`;
-    await tx`DELETE FROM public.users WHERE business_id = ${businessId} AND role = 'merchant'`;
+    await tx`UPDATE public.users
+      SET archived_at = now(), archived_by = ${actor?.id ?? null}, failed_attempts = 0, locked_until = NULL
+      WHERE business_id = ${businessId} AND role = 'merchant'`;
         await tx`UPDATE public.businesses SET active = false, updated_at = now() WHERE id = ${businessId}`;
         await tx`INSERT INTO public.audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at)
           VALUES (${actor?.id ?? null}, ${actor?.username ?? null}, 'delete_business', 'business', ${businessId}, ${`${Number(coupons.total)} bonos asociados; comercio archivado`}, now())`;
@@ -348,14 +353,20 @@ export async function restoreBusinessWithAccess(businessId: string) {
   if (!hasPostgresDatabase()) return sqliteAuth.restoreBusinessWithAccess(businessId);
   const business = await getBusinessRecord(businessId);
   if (!business || await isBusinessActive(businessId)) throw new Error("El comercio ya está activo o no existe.");
-  const username = await uniqueMerchantUsername(business.name);
   const password = temporaryPassword();
   const hash = await passwordHash(password);
+  let username = "";
   await getPostgres().begin(async (tx) => {
     const [current] = await tx`SELECT active FROM public.businesses WHERE id = ${businessId} FOR UPDATE`;
     if (!current || current.active) throw new Error("El comercio ya está activo o no existe.");
+    const [existing] = await tx<Array<{ id: number }>>`SELECT id FROM public.users WHERE business_id = ${businessId} AND role = 'merchant' FOR UPDATE`;
+    username = await uniqueMerchantUsername(business.name, existing ? Number(existing.id) : undefined);
     await tx`UPDATE public.businesses SET active = true, updated_at = now() WHERE id = ${businessId}`;
-    await tx`INSERT INTO public.users (username, password_hash, role, business_id) VALUES (${username}, ${hash}, 'merchant', ${businessId})`;
+    if (existing) {
+      await tx`UPDATE public.users SET username = ${username}, password_hash = ${hash}, archived_at = NULL, archived_by = NULL, failed_attempts = 0, locked_until = NULL WHERE id = ${existing.id}`;
+    } else {
+      await tx`INSERT INTO public.users (username, password_hash, role, business_id) VALUES (${username}, ${hash}, 'merchant', ${businessId})`;
+    }
   });
   return { businessName: business.name, username, password };
 }
@@ -372,7 +383,7 @@ export async function provisionMerchant(businessId: string) {
   await sql.begin(async (tx) => {
     const [existing] = await tx<Array<{ id: number }>>`SELECT id FROM public.users WHERE business_id = ${businessId} AND role = 'merchant' FOR UPDATE`;
     if (existing) {
-      await tx`UPDATE public.users SET username = ${username}, password_hash = ${hash}, failed_attempts = 0, locked_until = NULL WHERE id = ${existing.id}`;
+      await tx`UPDATE public.users SET username = ${username}, password_hash = ${hash}, archived_at = NULL, archived_by = NULL, failed_attempts = 0, locked_until = NULL WHERE id = ${existing.id}`;
       await tx`DELETE FROM public.sessions WHERE user_id = ${existing.id}`;
     } else {
       await tx`INSERT INTO public.users (username, password_hash, role, business_id) VALUES (${username}, ${hash}, 'merchant', ${businessId})`;

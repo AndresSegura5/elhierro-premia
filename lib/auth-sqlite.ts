@@ -27,6 +27,8 @@ type UserRow = {
   business_id: string | null;
   failed_attempts: number;
   locked_until: string | null;
+  archived_at: string | null;
+  archived_by: number | null;
 };
 export type SessionUser = Pick<UserRow, "id" | "username" | "role"> & {
   businessId: string | null;
@@ -87,7 +89,7 @@ export async function signInDetailed(username: string, password: string, role: R
   const db = getDatabase();
   const user = role === "admin"
     ? db.prepare("SELECT * FROM users WHERE (username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE) AND role = 'admin'").get(normalized, normalized) as UserRow | undefined
-    : db.prepare("SELECT * FROM users WHERE username = ? COLLATE NOCASE AND role = 'merchant'").get(normalized) as UserRow | undefined;
+    : db.prepare("SELECT * FROM users WHERE username = ? COLLATE NOCASE AND role = 'merchant' AND archived_at IS NULL").get(normalized) as UserRow | undefined;
   if (!user) {
     await passwordMatches(password, `scrypt:unknown-account:${"0".repeat(128)}`);
     return { success: false, reason: "invalid" };
@@ -141,6 +143,7 @@ export async function getSession(): Promise<SessionUser | null> {
       u.first_name, u.last_name, u.email, u.must_change_password, u.is_superuser
     FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = ? AND s.expires_at > ?
+      AND (u.role = 'admin' OR u.archived_at IS NULL)
   `).get(tokenHash(token), new Date().toISOString()) as Pick<UserRow, "id" | "username" | "role" | "business_id" | "first_name" | "last_name" | "email" | "must_change_password" | "is_superuser"> | undefined;
   return row ? {
     id: row.id,
@@ -278,7 +281,7 @@ export async function changeAdminPassword(currentPassword: string, newPassword: 
 }
 
 export function listMerchantAccounts() {
-  return getDatabase().prepare("SELECT username, business_id FROM users WHERE role = 'merchant'").all() as Array<{ username: string; business_id: string }>;
+  return getDatabase().prepare("SELECT username, business_id FROM users WHERE role = 'merchant' AND archived_at IS NULL").all() as Array<{ username: string; business_id: string }>;
 }
 
 function businessUsername(name: string) {
@@ -340,7 +343,7 @@ export function deleteBusinessAndAccess(businessId: string, actor?: { id: number
     const linked = db.prepare("SELECT COUNT(*) AS total FROM coupons WHERE business_id = ?").get(businessId) as { total: number };
     const merchantIds = db.prepare("SELECT id FROM users WHERE business_id = ? AND role = 'merchant'").all(businessId) as Array<{ id: number }>;
     for (const merchant of merchantIds) db.prepare("DELETE FROM sessions WHERE user_id = ?").run(merchant.id);
-    db.prepare("DELETE FROM users WHERE business_id = ? AND role = 'merchant'").run(businessId);
+    db.prepare("UPDATE users SET archived_at = ?, archived_by = ?, failed_attempts = 0, locked_until = NULL WHERE business_id = ? AND role = 'merchant'").run(new Date().toISOString(), actor?.id ?? null, businessId);
     const result = db.prepare("UPDATE businesses SET active = 0 WHERE id = ?").run(businessId);
     if (!result.changes) throw new Error("No se encontró el comercio que quieres borrar.");
     db.prepare("INSERT INTO audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
@@ -361,9 +364,14 @@ export async function restoreBusinessWithAccess(businessId: string) {
   const hash = await passwordHash(password);
   db.exec("BEGIN IMMEDIATE");
   try {
-    const username = uniqueMerchantUsername(business.name);
+    const existing = db.prepare("SELECT id FROM users WHERE business_id = ? AND role = 'merchant'").get(businessId) as { id: number } | undefined;
+    const username = uniqueMerchantUsername(business.name, existing?.id);
     db.prepare("UPDATE businesses SET active = 1 WHERE id = ?").run(businessId);
-    db.prepare("INSERT INTO users (username, password_hash, role, business_id) VALUES (?, ?, 'merchant', ?)").run(username, hash, businessId);
+    if (existing) {
+      db.prepare("UPDATE users SET username = ?, password_hash = ?, archived_at = NULL, archived_by = NULL, failed_attempts = 0, locked_until = NULL WHERE id = ?").run(username, hash, existing.id);
+    } else {
+      db.prepare("INSERT INTO users (username, password_hash, role, business_id) VALUES (?, ?, 'merchant', ?)").run(username, hash, businessId);
+    }
     db.exec("COMMIT");
     return { businessName: business.name, username, password };
   } catch (error) {
@@ -383,7 +391,7 @@ export async function provisionMerchant(businessId: string) {
     const existing = db.prepare("SELECT id FROM users WHERE business_id = ? AND role = 'merchant'").get(businessId) as { id: number } | undefined;
     const username = uniqueMerchantUsername(business.name, existing?.id);
     if (existing) {
-      db.prepare("UPDATE users SET username = ?, password_hash = ?, failed_attempts = 0, locked_until = NULL WHERE id = ?").run(username, hash, existing.id);
+      db.prepare("UPDATE users SET username = ?, password_hash = ?, archived_at = NULL, archived_by = NULL, failed_attempts = 0, locked_until = NULL WHERE id = ?").run(username, hash, existing.id);
       db.prepare("DELETE FROM sessions WHERE user_id = ?").run(existing.id);
     } else {
       db.prepare("INSERT INTO users (username, password_hash, role, business_id) VALUES (?, ?, 'merchant', ?)").run(username, hash, businessId);

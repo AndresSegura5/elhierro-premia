@@ -89,6 +89,15 @@ export type LoginAuditRecord = {
   signedOutAt: string | null;
 };
 
+export type MerchantAccountAuditRecord = {
+  id: number;
+  username: string;
+  businessId: string;
+  businessName: string;
+  archivedAt: string | null;
+  archivedByUsername: string | null;
+};
+
 export type AuditEventRecord = {
   id: number;
   actorUsername: string | null;

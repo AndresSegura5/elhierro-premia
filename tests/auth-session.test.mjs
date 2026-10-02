@@ -28,7 +28,7 @@ async function loadAuth(filename) {
 
 function fixture(postgres) {
   const db = new DatabaseSync(":memory:");
-  db.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password_hash TEXT, role TEXT, business_id TEXT, demo_business_id TEXT, first_name TEXT, last_name TEXT, email TEXT, must_change_password INTEGER DEFAULT 0, is_superuser INTEGER DEFAULT 0, failed_attempts INTEGER DEFAULT 0, locked_until TEXT);
+  db.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password_hash TEXT, role TEXT, business_id TEXT, demo_business_id TEXT, first_name TEXT, last_name TEXT, email TEXT, must_change_password INTEGER DEFAULT 0, is_superuser INTEGER DEFAULT 0, failed_attempts INTEGER DEFAULT 0, locked_until TEXT, archived_at TEXT, archived_by INTEGER);
     CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, user_id INTEGER, expires_at TEXT);
     CREATE TABLE login_events (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, username TEXT, role TEXT, session_token_hash TEXT UNIQUE, signed_in_at TEXT, signed_out_at TEXT);
     CREATE TABLE businesses (id TEXT PRIMARY KEY, active INTEGER);
@@ -118,6 +118,17 @@ for (const backend of ["auth-sqlite", "auth"]) {
       assert.equal(await auth.signIn("tienda-los-mocanes", state.password, "merchant"), false);
       assert.equal(state.jar.get("bonos_session").value, token);
       assert.equal((await auth.getSession()).role, "admin");
+    } finally { state.db.close(); }
+  });
+
+  test(`${backend}: archived merchant accounts keep their history but cannot sign in`, async () => {
+    const state = fixture(backend === "auth");
+    globalThis.__authSessionFixture = state;
+    try {
+      state.db.exec("UPDATE users SET archived_at = '2026-10-02T00:00:00.000Z', archived_by = 1 WHERE id = 2");
+      assert.deepEqual(await auth.signInDetailed("tienda-los-mocanes", state.password, "merchant"), { success: false, reason: "invalid" });
+      assert.equal(state.db.prepare("SELECT count(*) AS total FROM users WHERE id = 2").get().total, 1);
+      assert.equal(state.db.prepare("SELECT archived_at FROM users WHERE id = 2").get().archived_at, "2026-10-02T00:00:00.000Z");
     } finally { state.db.close(); }
   });
 
