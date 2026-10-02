@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Camera, CameraOff, CheckCircle2, Keyboard, ScanLine, Wallet, X } from "lucide-react";
 import jsQR from "jsqr";
-import { formatDate, formatDateTime, formatEuros, parseEuros } from "@/lib/bonos";
+import { formatEuros, parseEuros } from "@/lib/bonos";
 import type { Coupon, Redemption } from "@/lib/types";
 import { normalizeCouponCode } from "@/lib/coupon-code";
 import { getPendingRedemptions, removePendingRedemption, savePendingRedemption, type PendingRedemption } from "@/lib/redemption-outbox";
@@ -47,8 +47,8 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
   const [busy, setBusy] = useState(false);
   const [pendingRedemptions, setPendingRedemptions] = useState<PendingRedemption[]>([]);
   const [isOnline, setIsOnline] = useState(true);
-  const [wrongBusiness, setWrongBusiness] = useState<{ code: string; businessName: string } | null>(null);
-  const [exhaustedCoupon, setExhaustedCoupon] = useState<{ code: string; businessName: string } | null>(null);
+  const [wrongBusiness, setWrongBusiness] = useState<{ businessName: string } | null>(null);
+  const [exhaustedCoupon, setExhaustedCoupon] = useState<{ businessName: string } | null>(null);
 
   const lookup = useCallback(async (value: string) => {
     const code = normalizeCouponCode(value);
@@ -61,18 +61,24 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
     try {
       const response = await fetch(`/api/bonos/${encodeURIComponent(code)}`, { cache: "no-store" });
       const data = await response.json();
+      if (response.status === 409) {
+        setManualCode(code);
+        setEntryMode("idle");
+        setWrongBusiness({ businessName: data.businessName ?? "otro comercio" });
+        return;
+      }
       if (!response.ok) throw new Error(data.error ?? "No se pudo consultar el bono.");
       if (data.coupon?.businessId !== businessId) {
         setManualCode(data.coupon?.code ?? code);
         setEntryMode("idle");
-        setWrongBusiness({ code: data.coupon?.code ?? code, businessName: data.businessName ?? "otro comercio" });
+        setWrongBusiness({ businessName: data.businessName ?? "otro comercio" });
         return;
       }
       const remainingCents = Number(data.coupon?.amountCents) - Number(data.coupon?.usedCents);
       if (data.coupon?.status === "redeemed" || (Number.isFinite(remainingCents) && remainingCents <= 0)) {
         setManualCode(data.coupon?.code ?? code);
         setEntryMode("idle");
-        setExhaustedCoupon({ code: data.coupon?.code ?? code, businessName: data.businessName ?? businessName });
+        setExhaustedCoupon({ businessName: data.businessName ?? businessName });
         return;
       }
       setResult(data as Lookup);
@@ -420,23 +426,13 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
         {isOnline && <button type="button" onClick={() => void syncOutbox()}>Reintentar envío</button>}
       </div>}
       {result && <div className="scanner-side scanner-result" role="status" aria-live="polite">
-        <div className="scanner-coupon-head"><CheckCircle2 size={20} aria-hidden="true" /><strong className="mono">{result.coupon.code}</strong><span className={`status-dot ${result.coupon.status}`}>{statusLabels[result.coupon.status]}</span><button type="button" className="scanner-restart" onClick={resetScanner} aria-label="Consultar otro bono" title="Consultar otro bono"><ScanLine size={18} aria-hidden="true" /></button></div>
+        <div className="scanner-coupon-head"><CheckCircle2 size={20} aria-hidden="true" /><span className={`status-dot ${result.coupon.status}`}>{statusLabels[result.coupon.status]}</span><button type="button" className="scanner-restart" onClick={resetScanner} aria-label="Consultar otro bono" title="Consultar otro bono"><ScanLine size={18} aria-hidden="true" /></button></div>
         <p className="scanner-balance"><Wallet size={20} aria-hidden="true" /> Saldo disponible: <strong>{formatEuros(balance)}</strong>{pendingForCoupon > 0 && <small> (incluye {formatEuros(pendingForCoupon)} pendiente de sincronizar)</small>}</p>
         {canRedeem && result.coupon.businessId === businessId && <form className="scanner-spend" onSubmit={registerExpense}>
           <label htmlFor="expense-amount">Importe de la compra</label>
           <div><input ref={expenseInputRef} id="expense-amount" type="text" inputMode="decimal" placeholder="0,00" value={amount} onChange={(event) => setAmount(event.target.value)} required /><button type="submit" className="button" disabled={busy}>{busy ? "Guardando..." : "Guardar gasto"}</button></div>
           <small>Máximo disponible: {formatEuros(balance)}.</small>
         </form>}
-        <details className="scanner-more-info" open={!canRedeem}>
-          <summary>Ver detalles del bono</summary>
-          <dl>
-            <div><dt>Comercio asignado</dt><dd>{result.businessName}</dd></div>
-            <div><dt>Carrera</dt><dd>{result.raceName}</dd></div>
-            <div><dt>Válido hasta</dt><dd>{formatDate(result.coupon.expiresAt)}</dd></div>
-            <div><dt>Gastado</dt><dd>{formatEuros(result.coupon.usedCents)}</dd></div>
-          </dl>
-          {result.redemptions.length > 0 && <ul className="scanner-movements">{result.redemptions.map((entry) => <li key={entry.id}><span>{formatDateTime(entry.createdAt)}</span><strong>{formatEuros(entry.amountCents)}</strong></li>)}</ul>}
-        </details>
       </div>}
       </> : <div className="scanner-desktop">
         <div className="scanner-view">
@@ -470,23 +466,13 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
             {isOnline && <button type="button" onClick={() => void syncOutbox()}>Reintentar envío</button>}
           </div>}
           {result && <div className="scanner-coupon" role="status" aria-live="polite">
-            <div className="scanner-coupon-head"><CheckCircle2 size={20} aria-hidden="true" /><strong className="mono">{result.coupon.code}</strong><span className={`status-dot ${result.coupon.status}`}>{statusLabels[result.coupon.status]}</span></div>
+            <div className="scanner-coupon-head"><CheckCircle2 size={20} aria-hidden="true" /><span className={`status-dot ${result.coupon.status}`}>{statusLabels[result.coupon.status]}</span></div>
             <p className="scanner-balance"><Wallet size={20} aria-hidden="true" /> Saldo disponible: <strong>{formatEuros(balance)}</strong>{pendingForCoupon > 0 && <small> (incluye {formatEuros(pendingForCoupon)} pendiente de sincronizar)</small>}</p>
             {canRedeem && result.coupon.businessId === businessId && <form className="scanner-spend" onSubmit={registerExpense}>
               <label htmlFor="expense-amount">Importe de la compra</label>
               <div><input ref={expenseInputRef} id="expense-amount" type="text" inputMode="decimal" placeholder="0,00" value={amount} onChange={(event) => setAmount(event.target.value)} required /><button type="submit" className="button" disabled={busy}>{busy ? "Guardando..." : "Guardar gasto"}</button></div>
               <small>Máximo disponible: {formatEuros(balance)}.</small>
             </form>}
-            <details className="scanner-more-info" open={!canRedeem}>
-              <summary>Ver detalles del bono</summary>
-              <dl>
-                <div><dt>Comercio asignado</dt><dd>{result.businessName}</dd></div>
-                <div><dt>Carrera</dt><dd>{result.raceName}</dd></div>
-                <div><dt>Válido hasta</dt><dd>{formatDate(result.coupon.expiresAt)}</dd></div>
-                <div><dt>Gastado</dt><dd>{formatEuros(result.coupon.usedCents)}</dd></div>
-              </dl>
-              {result.redemptions.length > 0 && <ul className="scanner-movements">{result.redemptions.map((entry) => <li key={entry.id}><span>{formatDateTime(entry.createdAt)}</span><strong>{formatEuros(entry.amountCents)}</strong></li>)}</ul>}
-            </details>
           </div>}
         </div>
       </div>}
@@ -495,7 +481,7 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
           <button type="button" className="scanner-modal-close" onClick={() => setWrongBusiness(null)} aria-label="Cerrar aviso"><X size={20} aria-hidden="true" /></button>
           <AlertTriangle size={34} aria-hidden="true" className="scanner-modal-icon" />
           <h2 id="scanner-wrong-business-title">Bono de otro comercio</h2>
-          <p>El bono <strong className="mono">{wrongBusiness.code}</strong> está asignado a <strong>{wrongBusiness.businessName}</strong>. Este comercio no puede consultar ni registrar compras con él.</p>
+          <p>Este bono está asignado a <strong>{wrongBusiness.businessName}</strong>. Este comercio no puede consultar ni registrar compras con él.</p>
           <button type="button" className="button" onClick={() => setWrongBusiness(null)}>Entendido</button>
         </section>
       </div>}
@@ -504,7 +490,7 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
           <button type="button" className="scanner-modal-close" onClick={() => setExhaustedCoupon(null)} aria-label="Cerrar aviso"><X size={20} aria-hidden="true" /></button>
           <AlertTriangle size={34} aria-hidden="true" className="scanner-modal-icon" />
           <h2 id="scanner-exhausted-title">Bono agotado</h2>
-          <p>El bono <strong className="mono">{exhaustedCoupon.code}</strong> de <strong>{exhaustedCoupon.businessName}</strong> ya no tiene saldo disponible.</p>
+          <p>El bono de <strong>{exhaustedCoupon.businessName}</strong> ya no tiene saldo disponible.</p>
           <button type="button" className="button" onClick={() => setExhaustedCoupon(null)}>Entendido</button>
         </section>
       </div>}

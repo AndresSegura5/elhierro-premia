@@ -12,11 +12,15 @@ type Context = { params: Promise<{ code: string }> };
 async function responseFor(code: string, businessId?: string | null) {
   if (!isValidCouponCode(code.trim().toUpperCase())) return NextResponse.json({ error: "Bono no encontrado." }, { status: 404, headers: { "Cache-Control": "no-store" } });
   const details = await getCouponDetails(code);
-  if (!details || (businessId && details.coupon.businessId !== businessId)) return NextResponse.json({ error: "Bono no encontrado." }, { status: 404, headers: { "Cache-Control": "no-store" } });
+  if (!details) return NextResponse.json({ error: "Bono no encontrado." }, { status: 404, headers: { "Cache-Control": "no-store" } });
+  const businessName = (await getBusinessRecord(details.coupon.businessId))?.name ?? "Comercio no disponible";
+  if (businessId && details.coupon.businessId !== businessId) {
+    return NextResponse.json({ error: "Este bono pertenece a otro comercio.", businessName }, { status: 409, headers: { "Cache-Control": "no-store" } });
+  }
   return NextResponse.json({
     coupon: details.coupon,
     raceName: details.race.name,
-    businessName: (await getBusinessRecord(details.coupon.businessId))?.name ?? "Comercio no disponible",
+    businessName,
     redemptions: details.redemptions,
   }, { headers: { "Cache-Control": "no-store" } });
 }
@@ -68,7 +72,11 @@ export async function POST(request: Request, { params }: Context) {
     await redeemCoupon(code, session.businessId, cents, new Date(), idempotencyKey);
     return responseFor(code, session.businessId);
   } catch (error) {
-    if (error instanceof Error && error.message === "Este bono pertenece a otro comercio.") return NextResponse.json({ error: "Bono no encontrado." }, { status: 404 });
+    if (error instanceof Error && error.message === "Este bono pertenece a otro comercio.") {
+      const details = await getCouponDetails(code);
+      const businessName = details ? (await getBusinessRecord(details.coupon.businessId))?.name ?? "Comercio no disponible" : "otro comercio";
+      return NextResponse.json({ error: "Este bono pertenece a otro comercio.", businessName }, { status: 409, headers: { "Cache-Control": "no-store" } });
+    }
     const knownRejection = new Set([
       "Introduce un importe mayor que cero.",
       "Este comercio no está activo.",
