@@ -3544,8 +3544,8 @@ td a {
   width: 24px;
   height: 24px;
   transform: translate(-4px, -4px);
-  background: #1976d2;
-  box-shadow: 0 0 0 4px rgba(25, 118, 210, .22), 0 3px 10px rgba(5, 37, 57, .42);
+  background: var(--ink);
+  box-shadow: 0 0 0 4px rgba(7, 22, 38, .2), 0 3px 10px rgba(5, 37, 57, .42);
 }
 .island-marker span.selected {
   background: #071626;
