@@ -141,7 +141,7 @@ export const siteContentDefaults = {
     titleAccent: "tu bono",
     steps: [
       { icon: "ticket", title: "Recoge tu bono con el dorsal.", body: "Al retirar el dorsal de tu carrera recibes un bono de 30 € de esa prueba y válido en un comercio concreto de la isla." },
-      { icon: "store", title: "Visita el comercio asignado.", body: "Cada bono va ligado a un único comercio local. La asignación es equitativa y prioriza los negocios con menos bonos de esa carrera." },
+      { icon: "store", title: "Visita el comercio asignado.", body: "Cada bono va ligado a un único comercio local." },
       { icon: "qr", title: "Presenta tu código QR.", body: "En el comercio, muestra el QR o el código. Puedes gastar el saldo en varias compras, siempre en el mismo negocio y antes del vencimiento." },
     ],
     racesHeading: "Tu carrera, tu bono",
