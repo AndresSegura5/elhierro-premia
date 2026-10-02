@@ -5027,6 +5027,8 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
 .nav-merchant-menu > summary:focus-visible,
 .nav-account-menu > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .nav-mobile-label { display: none; }
+.nav-menu-label { display: inline; min-width: 0; }
+.main-nav .nav-menu-label { font-size: inherit !important; font-weight: inherit; }
 .nav-mobile-logout { display: none; }
 .nav-mobile-menu-icon,
 .nav-mobile-menu-arrow { display: none; }
@@ -5456,8 +5458,11 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
 /* Mobile menu: mirror the spacious, icon-led navigation used in the merchant reference. */
 @media (max-width: 760px) {
   .site-header--menu-open .main-nav > a {
+    display: grid !important;
+    grid-template-columns: 48px minmax(0, 1fr) 30px;
     justify-content: flex-start;
-    gap: 24px;
+    column-gap: 24px;
+    row-gap: 0;
     min-height: 76px;
     padding: 0 18px;
     border-bottom: 1px solid var(--line);
@@ -5491,6 +5496,12 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
     display: block !important;
     flex: 0 0 auto;
   }
+
+  .site-header--menu-open .main-nav > a .nav-mobile-menu-icon { grid-column: 1; }
+  .site-header--menu-open .main-nav > a .nav-menu-label { grid-column: 2; min-width: 0; }
+  .site-header--menu-open .main-nav > a .nav-mobile-menu-arrow { grid-column: 3; margin-left: 0; }
+  .site-header--menu-open .main-nav > a .nav-menu-label { font-size: 30px !important; font-weight: 500; }
+  .site-header--menu-open .main-nav > a.nav-business .nav-menu-label { font-size: 24px !important; }
 
   .site-header--menu-open .main-nav > a .nav-mobile-menu-icon,
   .site-header--menu-open .nav-merchant-menu > summary .nav-merchant-store-icon,

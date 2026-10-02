@@ -47,12 +47,12 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
         <nav id="primary-navigation" className={`main-nav${menuOpen ? " main-nav--open" : ""}`} aria-label="Navegación principal">
           <Link href="/comercios" onClick={() => setMenuOpen(false)} aria-current={pathname === "/comercios" ? "page" : undefined}>
             <Store className="nav-mobile-menu-icon" size={30} aria-hidden="true" />
-            Comercios
+            <span className="nav-menu-label">Comercios</span>
             <ChevronRight className="nav-mobile-menu-arrow" size={30} aria-hidden="true" />
           </Link>
           <Link href="/bono" onClick={() => setMenuOpen(false)} aria-current={pathname === "/bono" ? "page" : undefined}>
             <TicketPercent className="nav-mobile-menu-icon" size={30} aria-hidden="true" />
-            El bono
+            <span className="nav-menu-label">El bono</span>
             <ChevronRight className="nav-mobile-menu-arrow" size={30} aria-hidden="true" />
           </Link>
           {merchantName ? (
@@ -85,7 +85,7 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
               aria-current={pathname === "/comercio" || pathname.startsWith("/comercio/") ? "page" : undefined}
             >
               <Store className="nav-mobile-menu-icon" size={16} aria-hidden="true" />
-              Área de comercios
+              <span className="nav-menu-label">Área de comercios</span>
               <ArrowUpRight className="nav-business-desktop-arrow" size={15} aria-hidden="true" />
               <ChevronRight className="nav-mobile-menu-arrow" size={30} aria-hidden="true" />
             </Link>
@@ -105,7 +105,7 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
             <Link href="/admin" onClick={() => setMenuOpen(false)} className="nav-admin nav-icon" title="Administración" aria-label="Administración" aria-current={pathname.startsWith("/admin") ? "page" : undefined}>
               <Settings className="nav-mobile-menu-icon" size={30} aria-hidden="true" />
               <UserRound className="nav-desktop-admin-icon" size={19} aria-hidden="true" />
-              <span className="nav-mobile-label">Administración</span>
+              <span className="nav-menu-label nav-mobile-label">Administración</span>
               <ChevronRight className="nav-mobile-menu-arrow" size={30} aria-hidden="true" />
             </Link>
           )}
