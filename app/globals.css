@@ -5465,6 +5465,19 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
     text-align: left;
   }
 
+  .site-header--menu-open .main-nav > a.nav-business {
+    justify-content: flex-start;
+    min-height: 76px;
+    margin: 0;
+    padding: 0 18px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+    font-size: 24px !important;
+    line-height: 1.2;
+  }
+
   .site-header--menu-open .main-nav > a .nav-mobile-menu-icon,
   .site-header--menu-open .main-nav > a .nav-mobile-menu-arrow,
   .site-header--menu-open .nav-merchant-menu > summary .nav-merchant-store-icon,
