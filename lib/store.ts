@@ -4,7 +4,7 @@ import { generateCouponCode } from "./coupon-token";
 import * as sqliteStore from "./store-sqlite";
 import { hasPostgresDatabase, getPostgres } from "./postgres";
 import { addDays, BONO_CENTS, couponStatus, todayInCanary } from "./bonos";
-import { couponRules, siteContentDefaults } from "./data";
+import { couponRules, raceDefaults, siteContentDefaults } from "./data";
 import { legalContentDefaults } from "./legal-content";
 import { chooseLeastAssignedBusiness } from "./coupon-assignment";
 import { businessCategories } from "./business-categories";
@@ -15,6 +15,7 @@ type RaceRecord = {
   name: string;
   short_name: string;
   coupon_quantity: number;
+  race_date: string | Date | null;
   start_date: string | Date;
   validity_days: number;
   color: string;
@@ -47,18 +48,20 @@ function dateString(value: string | Date) {
 }
 
 function mapRace(row: RaceRecord): Race {
+  const defaults = raceDefaults.find((race) => race.id === row.id);
   return {
     id: row.id,
     name: row.name,
     shortName: row.short_name,
     couponQuantity: Number(row.coupon_quantity),
+    raceDate: dateString(row.race_date ?? defaults?.raceDate ?? row.start_date),
     startDate: dateString(row.start_date),
     validityDays: Number(row.validity_days),
     color: row.color,
     description: row.description,
     logoPath: row.logo_path ?? "",
-    cardImagePath: row.card_image_path ?? "",
-    cardImagePosition: row.card_image_position ?? "center",
+    cardImagePath: defaults?.cardImagePath ?? row.card_image_path ?? "",
+    cardImagePosition: defaults?.cardImagePosition ?? row.card_image_position ?? "center",
   };
 }
 
@@ -323,24 +326,27 @@ export async function getCouponDetails(code: string) {
   return { coupon: localCoupon(row, race), race, redemptions: detailRows.map(mapRedemption) };
 }
 
-function validateRaceConfiguration(couponQuantity: number, startDate: string, validityDays: number) {
+function validateRaceConfiguration(couponQuantity: number, raceDate: string, startDate: string, validityDays: number) {
+  const validRaceDate = /^\d{4}-\d{2}-\d{2}$/.test(raceDate) && !Number.isNaN(Date.parse(`${raceDate}T00:00:00Z`))
+    && new Date(`${raceDate}T00:00:00Z`).toISOString().slice(0, 10) === raceDate;
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(startDate) && !Number.isNaN(Date.parse(`${startDate}T00:00:00Z`))
     && new Date(`${startDate}T00:00:00Z`).toISOString().slice(0, 10) === startDate;
   if (!Number.isInteger(couponQuantity) || couponQuantity < 1 || couponQuantity > 10000) throw new Error("Indica entre 1 y 10.000 bonos.");
+  if (!validRaceDate) throw new Error("Indica una fecha de carrera válida.");
   if (!validDate) throw new Error("Indica una fecha de inicio válida.");
   if (!Number.isInteger(validityDays) || validityDays < 1 || validityDays > 365) throw new Error("La vigencia debe estar entre 1 y 365 días.");
 }
 
-export async function saveRaceConfiguration(id: string, couponQuantity: number, startDate: string, validityDays: number) {
-  if (!hasPostgresDatabase()) return sqliteStore.saveRaceConfiguration(id, couponQuantity, startDate, validityDays);
-  validateRaceConfiguration(couponQuantity, startDate, validityDays);
+export async function saveRaceConfiguration(id: string, couponQuantity: number, raceDate: string, startDate: string, validityDays: number) {
+  if (!hasPostgresDatabase()) return sqliteStore.saveRaceConfiguration(id, couponQuantity, raceDate, startDate, validityDays);
+  validateRaceConfiguration(couponQuantity, raceDate, startDate, validityDays);
   const sql = getPostgres();
   await sql.begin(async (tx) => {
     const [race] = await tx`SELECT id FROM public.races WHERE id = ${id} FOR UPDATE`;
     if (!race) throw new Error("Carrera no reconocida.");
     const [issued] = await tx`SELECT count(*)::int AS total FROM public.coupons WHERE race_id = ${id}`;
     if (couponQuantity < Number(issued.total)) throw new Error(`Ya hay ${issued.total} bonos emitidos; la cantidad prevista no puede ser menor.`);
-    await tx`UPDATE public.races SET coupon_quantity = ${couponQuantity}, start_date = ${startDate}, validity_days = ${validityDays} WHERE id = ${id}`;
+    await tx`UPDATE public.races SET coupon_quantity = ${couponQuantity}, race_date = ${raceDate}, start_date = ${startDate}, validity_days = ${validityDays} WHERE id = ${id}`;
   });
 }
 

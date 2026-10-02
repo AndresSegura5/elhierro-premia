@@ -11,6 +11,12 @@ import {
   Shirt,
   ShoppingBasket,
   Store,
+  Cloud,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
+  CloudSun,
+  Sun,
   UtensilsCrossed,
   X,
 } from "lucide-react";
@@ -21,6 +27,20 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 const MAP_STYLE = "/branding/positron-sea.json";
 const MAP_ATTRIBUTION = '<span class="map-attribution-copyright">&copy;</span> <a href="https://www.openmaptiles.org/">OpenMapTiles</a> · <span class="map-attribution-copyright">&copy;</span> <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const MUNICIPALITY_LABEL_POSITIONS: Record<string, [number, number]> = {
+  FRONTERA: [27.76, -18.07],
+  VALVERDE: [27.83, -17.87],
+  "EL PINAR": [27.68, -18.07],
+};
+
+function weatherIconMarkup(code: number) {
+  const Icon = code === 0 ? Sun
+    : code <= 2 ? CloudSun
+      : code === 3 || (code >= 45 && code <= 48) ? (code >= 45 ? CloudFog : Cloud)
+        : code >= 95 ? CloudLightning
+          : CloudRain;
+  return renderToStaticMarkup(<Icon size={22} strokeWidth={2.2} aria-hidden="true" />);
+}
 
 export function iconForBusiness(category: string) {
   const name = category.toLowerCase();
@@ -61,6 +81,8 @@ export function IslandMap({
   zoomEnabled = true,
   scrollWheelZoom = false,
   clipToIsland = true,
+  showMunicipalities = false,
+  weatherTheme = "dark",
 }: {
   businesses: Business[];
   activeId?: string;
@@ -71,6 +93,8 @@ export function IslandMap({
   zoomEnabled?: boolean;
   scrollWheelZoom?: boolean;
   clipToIsland?: boolean;
+  showMunicipalities?: boolean;
+  weatherTheme?: "dark" | "light";
 }) {
   const element = useRef<HTMLDivElement>(null);
   const map = useRef<LeafletMap | null>(null);
@@ -129,7 +153,7 @@ export function IslandMap({
       } catch {
         islandCoords = [];
       }
-      if (clipToIsland) {
+      if (clipToIsland || showMunicipalities) {
         try {
           const response = await fetch("/municipios-el-hierro.geojson");
           const data = await response.json();
@@ -164,6 +188,10 @@ export function IslandMap({
       }).setView([27.75, -17.98], 11);
       map.current = instance;
       instanceForCleanup = instance;
+      // Keep weather details outside Leaflet's clipped container so they can
+      // expand over the map edge when a label sits near the side.
+      const weatherPane = instance.createPane("weatherPane", element.current.parentElement ?? instance.getContainer());
+      weatherPane.style.zIndex = "900";
       if (zoomEnabled) {
         L.control.zoom({ position: clipToIsland ? "topright" : "bottomright" }).addTo(instance);
       }
@@ -198,21 +226,64 @@ export function IslandMap({
           fill: false,
         }).addTo(instance);
       }
-      if (clipToIsland && municipalityGeoJson?.features?.length) {
+      if ((clipToIsland || showMunicipalities) && municipalityGeoJson?.features?.length) {
+        const municipalityWeather = new Map<string, {
+          temperature: string;
+          weatherCode: number;
+        }>();
+        if (showMunicipalities) {
+          await Promise.all(
+            ["Valverde", "Frontera", "El Pinar"].map(async (name) => {
+              try {
+                const response = await fetch(`/api/weather?municipality=${encodeURIComponent(name)}`);
+                if (!response.ok) return;
+                const data = await response.json();
+                const temperature = data.current?.temperature_2m;
+                if (typeof temperature === "number" && typeof data.current?.weather_code === "number") {
+                  municipalityWeather.set(name.toUpperCase(), {
+                    temperature: `${Math.round(temperature)}°C`,
+                    weatherCode: data.current.weather_code,
+                  });
+                }
+              } catch {
+                // The boundaries remain useful if a weather request fails.
+              }
+            }),
+          );
+        }
+
         L.geoJSON(municipalityGeoJson, {
           style: {
             color: "#071626",
-            weight: 3,
+            weight: showMunicipalities ? 2 : 3,
             opacity: 0.95,
-            fillColor: "#071626",
-            fillOpacity: 0.02,
+            fillColor: showMunicipalities ? "#8aa6b7" : "#071626",
+            fillOpacity: showMunicipalities ? 0.1 : 0.02,
             fill: true,
           },
-          onEachFeature: (_feature, layer) => {
+          onEachFeature: (feature, layer) => {
             const municipality = layer as LeafletPath;
+            const rawName = String(feature.properties?.nombre ?? "").trim();
+            const weather = municipalityWeather.get(rawName.toUpperCase());
+            if (showMunicipalities && weather) {
+              const labelPosition = MUNICIPALITY_LABEL_POSITIONS[rawName.toUpperCase()];
+              if (labelPosition) {
+                L.marker(labelPosition, {
+                  interactive: false,
+                  keyboard: false,
+                  pane: "weatherPane",
+                  icon: L.divIcon({
+                    className: "municipality-weather-label-marker",
+                    html: `<span class="municipality-weather-label${weatherTheme === "light" ? " municipality-weather-label--light" : ""}"><span class="municipality-weather-icon">${weatherIconMarkup(weather.weatherCode)}</span><strong>${weather.temperature}</strong></span>`,
+                    iconSize: [104, 42],
+                    iconAnchor: [52, 21],
+                  }),
+                }).addTo(instance);
+              }
+            }
             municipality.on({
-              mouseover: () => municipality.setStyle({ fillColor: "#071626", fillOpacity: 0.22 }),
-              mouseout: () => municipality.setStyle({ fillColor: "#071626", fillOpacity: 0.02 }),
+              mouseover: () => municipality.setStyle({ fillColor: "#2563eb", fillOpacity: showMunicipalities ? 0.2 : 0.22 }),
+              mouseout: () => municipality.setStyle({ fillColor: showMunicipalities ? "#8aa6b7" : "#071626", fillOpacity: showMunicipalities ? 0.1 : 0.02 }),
             });
           },
         }).addTo(instance);
@@ -333,7 +404,7 @@ export function IslandMap({
       markers.current.clear();
       markerBusinesses.current.clear();
     };
-  }, [markerStyle, zoomEnabled, scrollWheelZoom, clipToIsland]);
+  }, [markerStyle, zoomEnabled, scrollWheelZoom, clipToIsland, showMunicipalities, weatherTheme]);
 
   useEffect(() => {
     syncMarkersRef.current?.(businesses, visibleBusinessIds);

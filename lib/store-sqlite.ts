@@ -7,7 +7,7 @@ import { chooseLeastAssignedBusiness } from "./coupon-assignment";
 import { businesses, raceDefaults } from "./data";
 import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, LoginAuditRecord, ManagedBusiness, MerchantAccountAuditRecord, Municipality, Race, Redemption, RedemptionAuditRecord } from "./types";
 
-type RaceRow = { id: string; coupon_quantity: number; start_date: string; validity_days: number };
+type RaceRow = { id: string; coupon_quantity: number; race_date: string | null; start_date: string; validity_days: number };
 type CouponRow = { code: string; race_id: string; business_id: string; amount_cents: number; used_cents: number; created_at: string; deleted_at: string | null; deleted_by: number | null };
 type RedemptionRow = { id: number; code: string; business_id: string; amount_cents: number; balance_after_cents: number; created_at: string };
 type BusinessRow = {
@@ -82,6 +82,7 @@ export function getDatabase() {
     CREATE TABLE IF NOT EXISTS races (
       id TEXT PRIMARY KEY,
       coupon_quantity INTEGER NOT NULL CHECK (coupon_quantity BETWEEN 1 AND 10000),
+      race_date TEXT,
       start_date TEXT NOT NULL,
       validity_days INTEGER NOT NULL CHECK (validity_days BETWEEN 1 AND 365)
     );
@@ -167,6 +168,7 @@ export function getDatabase() {
     CREATE INDEX IF NOT EXISTS audit_events_created_at ON audit_events(created_at DESC);
   `);
   const raceColumns = db.prepare("PRAGMA table_info(races)").all() as Array<{ name: string }>;
+  if (!raceColumns.some((column) => column.name === "race_date")) db.exec("ALTER TABLE races ADD COLUMN race_date TEXT");
   const redemptionColumns = db.prepare("PRAGMA table_info(redemptions)").all() as Array<{ name: string }>;
   if (!redemptionColumns.some((column) => column.name === "idempotency_key")) db.exec("ALTER TABLE redemptions ADD COLUMN idempotency_key TEXT");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS redemptions_idempotency ON redemptions(business_id, idempotency_key) WHERE idempotency_key IS NOT NULL");
@@ -197,8 +199,10 @@ export function getDatabase() {
   db.prepare("UPDATE users SET is_superuser = 1 WHERE lower(username) = 'admin' AND role = 'admin'").run();
   const businessColumns = db.prepare("PRAGMA table_info(businesses)").all() as Array<{ name: string }>;
   if (!businessColumns.some((column) => column.name === "active")) db.exec("ALTER TABLE businesses ADD COLUMN active INTEGER NOT NULL DEFAULT 1");
-  const seed = db.prepare("INSERT OR IGNORE INTO races (id, coupon_quantity, start_date, validity_days) VALUES (?, ?, ?, ?)");
-  for (const race of raceDefaults) seed.run(race.id, race.couponQuantity, race.startDate, race.validityDays);
+  const seed = db.prepare("INSERT OR IGNORE INTO races (id, coupon_quantity, race_date, start_date, validity_days) VALUES (?, ?, ?, ?, ?)");
+  for (const race of raceDefaults) seed.run(race.id, race.couponQuantity, race.raceDate, race.startDate, race.validityDays);
+  const updateRaceDate = db.prepare("UPDATE races SET race_date = ? WHERE id = ? AND (race_date IS NULL OR race_date = '')");
+  for (const race of raceDefaults) updateRaceDate.run(race.raceDate, race.id);
   if (!hadBusinessesTable) {
     const insertBusiness = db.prepare("INSERT OR IGNORE INTO businesses (id, name, category, municipality, area, phone, address, lat, lng, opening_hours, description, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     for (const business of businesses) insertBusiness.run(business.id, business.name, business.category, business.municipality, business.area, business.phone, business.address, business.lat, business.lng, business.openingHours, business.description, business.image);
@@ -211,7 +215,7 @@ export function getDatabase() {
 function mapRace(row: RaceRow): Race {
   const defaults = raceDefaults.find((race) => race.id === row.id);
   if (!defaults) throw new Error("Carrera no reconocida.");
-  return { ...defaults, couponQuantity: row.coupon_quantity, startDate: row.start_date, validityDays: row.validity_days };
+  return { ...defaults, raceDate: row.race_date ?? defaults.raceDate, couponQuantity: row.coupon_quantity, startDate: row.start_date, validityDays: row.validity_days };
 }
 
 function mapCoupon(row: CouponRow, race: Race): Coupon {
@@ -413,20 +417,23 @@ export function getCouponDetails(code: string) {
   return { coupon: mapCoupon(row, race), race, redemptions: redemptions.map(mapRedemption) };
 }
 
-export function saveRaceConfiguration(id: string, couponQuantity: number, startDate: string, validityDays: number) {
+export function saveRaceConfiguration(id: string, couponQuantity: number, raceDate: string, startDate: string, validityDays: number) {
   const db = getDatabase();
   if (!getRace(id)) throw new Error("Carrera no reconocida.");
+  const validRaceDate = /^\d{4}-\d{2}-\d{2}$/.test(raceDate) && !Number.isNaN(Date.parse(`${raceDate}T00:00:00Z`))
+    && new Date(`${raceDate}T00:00:00Z`).toISOString().slice(0, 10) === raceDate;
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(startDate) && !Number.isNaN(Date.parse(`${startDate}T00:00:00Z`))
     && new Date(`${startDate}T00:00:00Z`).toISOString().slice(0, 10) === startDate;
   if (!Number.isInteger(couponQuantity) || couponQuantity < 1 || couponQuantity > 10000) throw new Error("Indica entre 1 y 10.000 bonos.");
+  if (!validRaceDate) throw new Error("Indica una fecha de carrera válida.");
   if (!validDate) throw new Error("Indica una fecha de inicio válida.");
   if (!Number.isInteger(validityDays) || validityDays < 1 || validityDays > 365) throw new Error("La vigencia debe estar entre 1 y 365 días.");
   db.exec("BEGIN IMMEDIATE");
   try {
     const issued = db.prepare("SELECT COUNT(*) AS total FROM coupons WHERE race_id = ?").get(id) as { total: number };
     if (couponQuantity < issued.total) throw new Error(`Ya hay ${issued.total} bonos emitidos; la cantidad prevista no puede ser menor.`);
-    db.prepare("UPDATE races SET coupon_quantity = ?, start_date = ?, validity_days = ? WHERE id = ?")
-      .run(couponQuantity, startDate, validityDays, id);
+    db.prepare("UPDATE races SET coupon_quantity = ?, race_date = ?, start_date = ?, validity_days = ? WHERE id = ?")
+      .run(couponQuantity, raceDate, startDate, validityDays, id);
     db.exec("COMMIT");
   } catch (error) {
     db.exec("ROLLBACK");

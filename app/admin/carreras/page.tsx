@@ -114,6 +114,7 @@ export default async function AdminPage({ searchParams }: {
                 <h2>{race.name}</h2>
               </div>
               <dl>
+                <div><dt>Fecha de la carrera</dt><dd>{formatDate(race.raceDate)}</dd></div>
                 <div><dt>Inicio del bono</dt><dd>{formatDate(race.startDate)}</dd></div>
                 <div><dt>Vencimiento</dt><dd>{formatDate(addDays(race.startDate, race.validityDays))}</dd></div>
                 <div><dt>Vigencia</dt><dd>{race.validityDays} días</dd></div>
@@ -126,6 +127,7 @@ export default async function AdminPage({ searchParams }: {
               <form action={saveRaceSettings} className="admin-settings-form">
                 <input type="hidden" name="raceId" value={race.id} />
                 <label><span>Cantidad de bonos</span><input name="couponQuantity" type="number" min={Math.max(1, raceCoupons.length)} max="10000" step="1" defaultValue={race.couponQuantity} required disabled={!canWrite} /></label>
+                <label><span>Fecha de la carrera</span><DatePicker key={`${race.id}-${race.raceDate}`} name="raceDate" label="Fecha de la carrera" defaultValue={race.raceDate} disabled={!canWrite} /></label>
                 <label><span>Inicio del bono</span><DatePicker key={`${race.id}-${race.startDate}`} name="startDate" label="Inicio del bono" defaultValue={race.startDate} disabled={!canWrite} /></label>
                 <label><span>Vigencia (días)</span><input name="validityDays" type="number" min="1" max="365" step="1" defaultValue={race.validityDays} required disabled={!canWrite} /></label>
                 <button type="submit" className="button" disabled={!canWrite}>Guardar</button>

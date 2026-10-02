@@ -10,15 +10,20 @@ type Props = {
   businesses: Business[];
   selectedId?: string;
   onSelect?: (id: string | null) => void;
+  highlightedId?: string;
   hideToolbar?: boolean;
   zoomEnabled?: boolean;
+  showMunicipalities?: boolean;
+  weatherTheme?: "dark" | "light";
 };
 
-export function BusinessMap({ businesses, selectedId, onSelect, hideToolbar = false, zoomEnabled = true }: Props) {
+export function BusinessMap({ businesses, selectedId, onSelect, highlightedId: externalHighlightedId, hideToolbar = false, zoomEnabled = true, showMunicipalities = false, weatherTheme = "dark" }: Props) {
   const [localActiveId, setLocalActiveId] = useState<string | undefined>(selectedId);
+  const [highlightedId, setHighlightedId] = useState<string>();
   const [query, setQuery] = useState("");
   const [municipality, setMunicipality] = useState("");
   const activeId = onSelect ? selectedId : localActiveId;
+  const mapHighlightedId = externalHighlightedId ?? highlightedId;
   const normalize = (value: string) =>
     value
       .normalize("NFD")
@@ -74,9 +79,12 @@ export function BusinessMap({ businesses, selectedId, onSelect, hideToolbar = fa
           <IslandMap
             businesses={filtered}
             activeId={activeId}
+            highlightedId={mapHighlightedId}
             onSelect={handleSelect}
             markerStyle="dot"
             zoomEnabled={zoomEnabled}
+            showMunicipalities={showMunicipalities}
+            weatherTheme={weatherTheme}
           />
           <div className="map-overlay">
             <div className="business-list">
@@ -89,6 +97,8 @@ export function BusinessMap({ businesses, selectedId, onSelect, hideToolbar = fa
                       : "business-row"
                   }
                   onClick={() => handleSelect(business.id)}
+                  onMouseEnter={() => setHighlightedId(business.id)}
+                  onMouseLeave={() => setHighlightedId(undefined)}
                   type="button"
                   aria-pressed={business.id === active.id}
                 >

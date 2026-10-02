@@ -27,7 +27,7 @@ export function PageTitleHero({
       </Heading>
       {description && <p className="page-title-hero-description">{description}</p>}
       {variant === "home" && <span className="page-title-hero-rule" aria-hidden="true" />}
-      {linkHref && linkLabel && <Link className="page-title-hero-link" href={linkHref}>{linkLabel}<ArrowUpRight className="page-title-hero-link-arrow" aria-hidden="true" /></Link>}
+      {linkHref && linkLabel && <Link className="page-title-hero-link" href={linkHref}><span className="page-title-hero-link-label">{linkLabel}</span><ArrowUpRight className="page-title-hero-link-arrow" aria-hidden="true" /></Link>}
     </header>
   );
 }

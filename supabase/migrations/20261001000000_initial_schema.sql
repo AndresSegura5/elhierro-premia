@@ -10,6 +10,7 @@ create table public.races (
   name text not null,
   short_name text not null,
   coupon_quantity integer not null check (coupon_quantity between 1 and 10000),
+  race_date date,
   start_date date not null,
   validity_days integer not null check (validity_days between 1 and 365),
   color text not null check (color ~ '^#[0-9A-Fa-f]{6}$'),

@@ -142,6 +142,7 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
             markerStyle="dot"
             scrollWheelZoom={mapExpanded}
             clipToIsland={false}
+            showMunicipalities
           />
           <button
             type="button"

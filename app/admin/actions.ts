@@ -27,6 +27,7 @@ export async function saveRaceSettings(formData: FormData) {
     await saveRaceConfiguration(
       id,
       Number(formData.get("couponQuantity")),
+      String(formData.get("raceDate") ?? ""),
       String(formData.get("startDate") ?? ""),
       Number(formData.get("validityDays")),
     );

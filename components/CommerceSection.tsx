@@ -48,6 +48,7 @@ export function CommerceSection({ businesses }: { businesses: Business[] }) {
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("Todos");
   const [selectedId, setSelectedId] = useState<string>();
+  const [highlightedId, setHighlightedId] = useState<string>();
   const [isOpen, setIsOpen] = useState(false);
   const visibleBusinesses = useMemo(
     () => businesses.filter((business) => matchesCategory(business, category)),
@@ -130,7 +131,11 @@ export function CommerceSection({ businesses }: { businesses: Business[] }) {
               {results.length ? (
                 <ul>
                   {results.map((business) => (
-                    <li key={business.id}>
+                    <li
+                      key={business.id}
+                      onMouseEnter={() => setHighlightedId(business.id)}
+                      onMouseLeave={() => setHighlightedId(undefined)}
+                    >
                       <button type="button" onClick={() => chooseBusiness(business)}>
                         <Store size={18} aria-hidden="true" />
                         <span>
@@ -171,9 +176,12 @@ export function CommerceSection({ businesses }: { businesses: Business[] }) {
         <BusinessMap
           businesses={visibleBusinesses}
           selectedId={selectedId}
+          highlightedId={highlightedId}
           onSelect={(id) => setSelectedId(id ?? undefined)}
           hideToolbar
           zoomEnabled={false}
+          showMunicipalities
+          weatherTheme="light"
         />
         <div className="map-compass" aria-hidden="true"><Compass size={28} /></div>
       </div>

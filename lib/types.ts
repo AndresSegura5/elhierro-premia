@@ -5,6 +5,7 @@ export type Race = {
   name: string;
   shortName: string;
   couponQuantity: number;
+  raceDate: string;
   startDate: string;
   validityDays: number;
   color: string;
