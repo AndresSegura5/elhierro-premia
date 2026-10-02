@@ -37,7 +37,7 @@ function fixture(postgres) {
   const salt = randomBytes(16).toString("hex");
   const hash = `scrypt:${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
   // Keep the legacy admin link in the fixture to ensure it cannot grant access.
-  db.prepare("INSERT INTO users (id, username, password_hash, role, demo_business_id) VALUES (1, 'admin', ?, 'admin', 'mocanes')").run(hash);
+  db.prepare("INSERT INTO users (id, username, password_hash, role, demo_business_id, is_superuser) VALUES (1, 'admin', ?, 'admin', 'mocanes', 1)").run(hash);
   db.prepare("INSERT INTO users (id, username, password_hash, role, business_id) VALUES (2, 'tienda-los-mocanes', ?, 'merchant', 'mocanes')").run(hash);
   const values = new Map();
   const jar = { get: (name) => values.has(name) ? { value: values.get(name) } : undefined, set: (name, value) => values.set(name, value), delete: (name) => values.delete(name) };

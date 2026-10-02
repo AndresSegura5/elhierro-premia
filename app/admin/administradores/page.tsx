@@ -23,7 +23,7 @@ export default async function AdminAccountsPage() {
   return <>
     <Header username={session.username} isAdmin />
     <main className="admin-main">
-      <section className="admin-hero"><div><p className="eyebrow">Panel de administración</p><h1>Administradores</h1><p>Gestiona las cuentas de acceso y las contraseñas del equipo.</p></div></section>
+      <section className="admin-hero"><div><p className="eyebrow">Panel de administración</p><h1>Administradores</h1><p>Gestiona las cuentas de acceso y las contraseñas del equipo. La cuenta superadministradora está protegida.</p></div></section>
       <AdminSectionNav active="admins" isSuperuser={session.isSuperuser} />
       <AdminAccounts accounts={accounts} actingAdminId={session.id} canWrite={demoWritesEnabled()} />
     </main>

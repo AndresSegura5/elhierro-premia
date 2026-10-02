@@ -212,7 +212,7 @@ export async function listAdminAccounts(): Promise<AdminAccountSummary[]> {
   if (!hasPostgresDatabase()) return sqliteAuth.listAdminAccounts();
   const rows = await getPostgres()<Array<Omit<AdminAccountSummary, "must_change_password" | "is_superuser"> & { must_change_password: boolean; is_superuser: boolean }>>`
     SELECT id, username, first_name, last_name, email, must_change_password, is_superuser
-    FROM public.users WHERE role = 'admin'
+    FROM public.users WHERE role = 'admin' AND is_superuser = false
     ORDER BY lower(first_name), lower(last_name), lower(username)
   `;
   return rows.map((row) => ({ ...row, id: Number(row.id), must_change_password: row.must_change_password ? 1 : 0, is_superuser: row.is_superuser }));
@@ -246,7 +246,7 @@ export async function resetAdminPassword(targetUserId: number, actingAdminId: nu
   const hash = await passwordHash(password);
   const sql = getPostgres();
   await sql.begin(async (tx) => {
-    const [target] = await tx`SELECT id FROM public.users WHERE id = ${targetUserId} AND role = 'admin' FOR UPDATE`;
+    const [target] = await tx`SELECT id FROM public.users WHERE id = ${targetUserId} AND role = 'admin' AND is_superuser = false FOR UPDATE`;
     if (!target) throw new Error("No se encontró ese administrador.");
     await tx`UPDATE public.users SET password_hash = ${hash}, must_change_password = true, failed_attempts = 0, locked_until = NULL WHERE id = ${targetUserId}`;
     await tx`DELETE FROM public.sessions WHERE user_id = ${targetUserId}`;

@@ -201,7 +201,7 @@ export type AdminAccountSummary = {
 export function listAdminAccounts() {
   const rows = getDatabase().prepare(`
     SELECT id, username, first_name, last_name, email, must_change_password, is_superuser
-    FROM users WHERE role = 'admin'
+    FROM users WHERE role = 'admin' AND is_superuser = 0
     ORDER BY first_name COLLATE NOCASE, last_name COLLATE NOCASE, username COLLATE NOCASE
   `).all() as Array<Omit<AdminAccountSummary, "is_superuser"> & { is_superuser: number }>;
   return rows.map((row) => ({ ...row, is_superuser: row.is_superuser === 1 }));
@@ -239,7 +239,7 @@ export async function resetAdminPassword(targetUserId: number, actingAdminId: nu
     throw new Error("Selecciona otro administrador para restablecer su contraseña.");
   }
   const db = getDatabase();
-  const target = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'admin'").get(targetUserId) as { id: number } | undefined;
+  const target = db.prepare("SELECT id FROM users WHERE id = ? AND role = 'admin' AND is_superuser = 0").get(targetUserId) as { id: number } | undefined;
   if (!target) throw new Error("No se encontró ese administrador.");
   const temporaryPassword = randomBytes(18).toString("base64url");
   const hash = await passwordHash(temporaryPassword);
