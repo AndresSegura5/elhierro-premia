@@ -8,7 +8,7 @@ import { couponRules, siteContentDefaults } from "./data";
 import { legalContentDefaults } from "./legal-content";
 import { chooseLeastAssignedBusiness } from "./coupon-assignment";
 import { businessCategories } from "./business-categories";
-import type { Business, Coupon, ManagedBusiness, Municipality, Race, Redemption } from "./types";
+import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, ManagedBusiness, Municipality, Race, Redemption, LoginAuditRecord } from "./types";
 
 type RaceRecord = {
   id: string;
@@ -38,7 +38,7 @@ type BusinessRecord = {
   image: string;
   active: boolean;
 };
-type CouponRecord = { code: string; race_id: string; business_id: string; amount_cents: number; used_cents: number };
+type CouponRecord = { code: string; race_id: string; business_id: string; amount_cents: number; used_cents: number; deleted_at: string | Date | null; deleted_by: number | null };
 type RedemptionRecord = { id: number; code: string; business_id: string; amount_cents: number; balance_after_cents: number; created_at: string | Date };
 
 
@@ -105,6 +105,8 @@ function localCoupon(row: CouponRecord, race: Race): Coupon {
     startDate: race.startDate,
     expiresAt: addDays(race.startDate, race.validityDays),
     status: couponStatus(race.startDate, race.validityDays, Number(row.amount_cents), Number(row.used_cents)),
+    deletedAt: row.deleted_at ? (row.deleted_at instanceof Date ? row.deleted_at.toISOString() : String(row.deleted_at)) : undefined,
+    deletedBy: row.deleted_by === null ? undefined : Number(row.deleted_by),
   };
 }
 
@@ -218,17 +220,59 @@ export async function listRaceCoupons(raceId: string): Promise<Coupon[]> {
   if (!hasPostgresDatabase()) return sqliteStore.listRaceCoupons(raceId);
   const race = await getRemoteRace(raceId);
   if (!race) return [];
-  const rows = await getPostgres()<CouponRecord[]>`SELECT * FROM public.coupons WHERE race_id = ${raceId} ORDER BY created_at, code`;
+  const rows = await getPostgres()<CouponRecord[]>`SELECT * FROM public.coupons WHERE race_id = ${raceId} AND deleted_at IS NULL ORDER BY created_at, code`;
   return rows.map((row) => localCoupon(row, race));
+}
+
+export async function listAllCouponAudit(): Promise<CouponAuditRecord[]> {
+  if (!hasPostgresDatabase()) return sqliteStore.listAllCouponAudit();
+  const rows = await getPostgres()<Array<{ code: string; race_id: string; race_name: string; business_id: string; business_name: string | null; amount_cents: number; used_cents: number; deleted_at: string | Date | null; deleted_by_username: string | null }>>`
+    SELECT c.code, c.race_id, r.name AS race_name, c.business_id, b.name AS business_name,
+      c.amount_cents, c.used_cents, c.deleted_at, u.username AS deleted_by_username
+    FROM public.coupons c
+    JOIN public.races r ON r.id = c.race_id
+    LEFT JOIN public.businesses b ON b.id = c.business_id
+    LEFT JOIN public.users u ON u.id = c.deleted_by
+    ORDER BY (c.deleted_at IS NULL), c.deleted_at DESC NULLS LAST, c.created_at DESC
+  `;
+  return rows.map((row) => ({
+    code: row.code,
+    raceId: row.race_id,
+    raceName: row.race_name,
+    businessId: row.business_id,
+    businessName: row.business_name ?? "Comercio eliminado",
+    amountCents: Number(row.amount_cents),
+    usedCents: Number(row.used_cents),
+    deletedAt: row.deleted_at ? (row.deleted_at instanceof Date ? row.deleted_at.toISOString() : String(row.deleted_at)) : null,
+    deletedByUsername: row.deleted_by_username,
+  }));
 }
 
 export async function listRaceRedemptions(raceId: string): Promise<Redemption[]> {
   if (!hasPostgresDatabase()) return sqliteStore.listRaceRedemptions(raceId);
   const rows = await getPostgres()<RedemptionRecord[]>`
     SELECT r.* FROM public.redemptions r JOIN public.coupons c ON c.code = r.code
-    WHERE c.race_id = ${raceId} ORDER BY r.created_at DESC, r.id DESC
+    WHERE c.race_id = ${raceId} AND c.deleted_at IS NULL ORDER BY r.created_at DESC, r.id DESC
   `;
   return rows.map(mapRedemption);
+}
+
+export async function listLoginAudit(limit = 100): Promise<LoginAuditRecord[]> {
+  if (!hasPostgresDatabase()) return sqliteStore.listLoginAudit(limit);
+  const rows = await getPostgres()<Array<{ id: number; user_id: number; username: string; role: string; signed_in_at: string | Date; signed_out_at: string | Date | null }>>`
+    SELECT id, user_id, username, role, signed_in_at, signed_out_at
+    FROM public.login_events ORDER BY signed_in_at DESC, id DESC LIMIT ${limit}
+  `;
+  return rows.map((row) => ({ id: Number(row.id), userId: Number(row.user_id), username: row.username, role: row.role, signedInAt: row.signed_in_at instanceof Date ? row.signed_in_at.toISOString() : String(row.signed_in_at), signedOutAt: row.signed_out_at ? (row.signed_out_at instanceof Date ? row.signed_out_at.toISOString() : String(row.signed_out_at)) : null }));
+}
+
+export async function listAuditEvents(limit = 100): Promise<AuditEventRecord[]> {
+  if (!hasPostgresDatabase()) return sqliteStore.listAuditEvents(limit);
+  const rows = await getPostgres()<Array<{ id: number; actor_username: string | null; action: string; entity_type: string; entity_id: string | null; details: string; created_at: string | Date }>>`
+    SELECT id, actor_username, action, entity_type, entity_id, details, created_at
+    FROM public.audit_events ORDER BY created_at DESC, id DESC LIMIT ${limit}
+  `;
+  return rows.map((row) => ({ id: Number(row.id), actorUsername: row.actor_username, action: row.action, entityType: row.entity_type, entityId: row.entity_id, details: row.details, createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at) }));
 }
 
 export async function listBusinessRedemptions(businessId: string): Promise<Redemption[]> {
@@ -242,7 +286,7 @@ export async function listBusinessRedemptions(businessId: string): Promise<Redem
 export async function getCouponDetails(code: string) {
   if (!hasPostgresDatabase()) return sqliteStore.getCouponDetails(code);
   const normalized = code.trim().toUpperCase();
-  const [row] = await getPostgres()<CouponRecord[]>`SELECT * FROM public.coupons WHERE code = ${normalized}`;
+  const [row] = await getPostgres()<CouponRecord[]>`SELECT * FROM public.coupons WHERE code = ${normalized} AND deleted_at IS NULL`;
   if (!row) return undefined;
   const race = await getRemoteRace(row.race_id);
   if (!race) return undefined;
@@ -282,13 +326,13 @@ export async function issueMissingCoupons(raceId: string) {
     if (!currentBusinesses.length) throw new Error("No hay comercios a los que asignar los bonos.");
     const prefix = { bestial: "BES", bimbache: "BIM", meridiano: "MER" }[raceId as "bestial" | "bimbache" | "meridiano"];
     if (!prefix) throw new Error("Carrera no reconocida.");
-    const [countRow] = await tx`SELECT count(*)::int AS total FROM public.coupons WHERE race_id = ${raceId}`;
+    const [countRow] = await tx`SELECT count(*)::int AS total FROM public.coupons WHERE race_id = ${raceId} AND deleted_at IS NULL`;
     const count = Number(countRow.total);
     const existingAssignments = await tx<Array<{ business_id: string; total: number }>>`
       SELECT c.business_id, count(*)::int AS total
       FROM public.coupons c
       JOIN public.businesses b ON b.id = c.business_id
-      WHERE c.race_id = ${raceId} AND b.active = true
+      WHERE c.race_id = ${raceId} AND c.deleted_at IS NULL AND b.active = true
       GROUP BY c.business_id
     `;
     const assignedCoupons = new Map(currentBusinesses.map(({ id }) => [id, 0]));
@@ -316,20 +360,22 @@ export async function issueMissingCoupons(raceId: string) {
   });
 }
 
-export async function deleteRaceCoupons(raceId: string) {
+export async function deleteRaceCoupons(raceId: string, actor?: { id: number; username: string }) {
   if (!hasPostgresDatabase()) return sqliteStore.deleteRaceCoupons(raceId);
   const sql = getPostgres();
   return sql.begin(async (tx) => {
     const [race] = await tx`SELECT id FROM public.races WHERE id = ${raceId} FOR UPDATE`;
     if (!race) throw new Error("Carrera no reconocida.");
-    const [coupons] = await tx`SELECT count(*)::int AS total FROM public.coupons WHERE race_id = ${raceId}`;
+    const [coupons] = await tx`SELECT count(*)::int AS total FROM public.coupons WHERE race_id = ${raceId} AND deleted_at IS NULL`;
     const previousCoupons = Number(coupons.total);
     if (!previousCoupons) throw new Error("Esta carrera todavía no tiene bonos emitidos.");
     const [redemptions] = await tx`
-      SELECT count(*)::int AS total FROM public.redemptions r JOIN public.coupons c ON c.code = r.code WHERE c.race_id = ${raceId}
+      SELECT count(*)::int AS total FROM public.redemptions r JOIN public.coupons c ON c.code = r.code WHERE c.race_id = ${raceId} AND c.deleted_at IS NULL
     `;
-    await tx`DELETE FROM public.redemptions r USING public.coupons c WHERE r.code = c.code AND c.race_id = ${raceId}`;
-    await tx`DELETE FROM public.coupons WHERE race_id = ${raceId}`;
+    const deletedAt = new Date().toISOString();
+    await tx`UPDATE public.coupons SET deleted_at = ${deletedAt}, deleted_by = ${actor?.id ?? null} WHERE race_id = ${raceId} AND deleted_at IS NULL`;
+    await tx`INSERT INTO public.audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at)
+      VALUES (${actor?.id ?? null}, ${actor?.username ?? null}, 'delete_coupons', 'race', ${raceId}, ${`${Number(coupons.total)} bonos y ${Number(redemptions.total)} movimientos marcados como eliminados`}, ${deletedAt})`;
     return { removedCoupons: previousCoupons, removedRedemptions: Number(redemptions.total) };
   });
 }

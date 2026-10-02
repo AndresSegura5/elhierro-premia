@@ -28,7 +28,7 @@ export default async function AdminBusinessesPage() {
             <p>Crea comercios y gestiona sus datos y credenciales de acceso.</p>
           </div>
         </section>
-        <AdminSectionNav active="businesses" />
+        <AdminSectionNav active="businesses" isSuperuser={session.isSuperuser} />
         <BusinessManagement businesses={businesses} accounts={accounts} categories={categories} />
       </main>
     </>

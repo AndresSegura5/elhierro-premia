@@ -19,6 +19,7 @@ type UserRow = {
   username: string;
   password_hash: string;
   role: Role;
+  is_superuser: number;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -33,6 +34,7 @@ export type SessionUser = Pick<UserRow, "id" | "username" | "role"> & {
   lastName: string | null;
   email: string | null;
   mustChangePassword: boolean;
+  isSuperuser: boolean;
 };
 
 async function passwordHash(password: string, salt = randomBytes(16).toString("hex")) {
@@ -67,7 +69,7 @@ export async function createFirstAdmin(username: string, password: string) {
   db.exec("BEGIN IMMEDIATE");
   try {
     if (adminExists()) throw new Error("La cuenta de administración ya está creada.");
-    db.prepare("INSERT INTO users (username, password_hash, role) VALUES (?, ?, 'admin')").run(normalized, hash);
+    db.prepare("INSERT INTO users (username, password_hash, role, is_superuser) VALUES (?, ?, 'admin', 1)").run(normalized, hash);
     db.exec("COMMIT");
   } catch (error) {
     db.exec("ROLLBACK");
@@ -110,7 +112,12 @@ export async function signInDetailed(username: string, password: string, role: R
     db.prepare("UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?").run(user.id);
     db.prepare("INSERT INTO sessions (token_hash, user_id, expires_at) VALUES (?, ?, ?)")
       .run(tokenHash(token), user.id, expires.toISOString());
-    if (previousToken) db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(tokenHash(previousToken));
+    if (previousToken) {
+      db.prepare("UPDATE login_events SET signed_out_at = COALESCE(signed_out_at, ?) WHERE session_token_hash = ?").run(new Date().toISOString(), tokenHash(previousToken));
+      db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(tokenHash(previousToken));
+    }
+    db.prepare("INSERT INTO login_events (user_id, username, role, session_token_hash, signed_in_at) VALUES (?, ?, ?, ?, ?)")
+      .run(user.id, user.username, user.role, tokenHash(token), new Date().toISOString());
     db.exec("COMMIT");
   } catch (error) {
     db.exec("ROLLBACK");
@@ -131,10 +138,10 @@ export async function getSession(): Promise<SessionUser | null> {
   if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const row = getDatabase().prepare(`
     SELECT u.id, u.username, u.role, u.business_id,
-      u.first_name, u.last_name, u.email, u.must_change_password
+      u.first_name, u.last_name, u.email, u.must_change_password, u.is_superuser
     FROM sessions s JOIN users u ON u.id = s.user_id
     WHERE s.token_hash = ? AND s.expires_at > ?
-  `).get(tokenHash(token), new Date().toISOString()) as Pick<UserRow, "id" | "username" | "role" | "business_id" | "first_name" | "last_name" | "email" | "must_change_password"> | undefined;
+  `).get(tokenHash(token), new Date().toISOString()) as Pick<UserRow, "id" | "username" | "role" | "business_id" | "first_name" | "last_name" | "email" | "must_change_password" | "is_superuser"> | undefined;
   return row ? {
     id: row.id,
     username: row.username,
@@ -144,6 +151,7 @@ export async function getSession(): Promise<SessionUser | null> {
     lastName: row.last_name,
     email: row.email,
     mustChangePassword: row.must_change_password === 1,
+    isSuperuser: row.is_superuser === 1,
   } : null;
 }
 
@@ -151,6 +159,12 @@ export async function requireAdmin() {
   const session = await getSession();
   if (session?.role !== "admin") redirect("/admin/login");
   if (session.mustChangePassword) redirect("/admin/primer-acceso");
+  return session;
+}
+
+export async function requireSuperAdmin() {
+  const session = await requireAdmin();
+  if (!session.isSuperuser) redirect("/admin/carreras");
   return session;
 }
 
@@ -163,7 +177,11 @@ export async function requireMerchant() {
 export async function signOut() {
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
-  if (token) getDatabase().prepare("DELETE FROM sessions WHERE token_hash = ?").run(tokenHash(token));
+  if (token) {
+    const db = getDatabase();
+    db.prepare("UPDATE login_events SET signed_out_at = COALESCE(signed_out_at, ?) WHERE session_token_hash = ?").run(new Date().toISOString(), tokenHash(token));
+    db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(tokenHash(token));
+  }
   jar.delete(COOKIE);
 }
 
@@ -174,14 +192,16 @@ export type AdminAccountSummary = {
   last_name: string | null;
   email: string | null;
   must_change_password: number;
+  is_superuser: number;
 };
 
 export function listAdminAccounts() {
-  return getDatabase().prepare(`
-    SELECT id, username, first_name, last_name, email, must_change_password
+  const rows = getDatabase().prepare(`
+    SELECT id, username, first_name, last_name, email, must_change_password, is_superuser
     FROM users WHERE role = 'admin'
     ORDER BY first_name COLLATE NOCASE, last_name COLLATE NOCASE, username COLLATE NOCASE
-  `).all() as AdminAccountSummary[];
+  `).all() as Array<Omit<AdminAccountSummary, "is_superuser"> & { is_superuser: number }>;
+  return rows.map((row) => ({ ...row, is_superuser: row.is_superuser === 1 }));
 }
 
 export async function createAdminAccount(firstName: string, lastName: string, email: string) {
@@ -313,7 +333,7 @@ export async function createBusinessWithMerchant(business: Omit<Business, "id">)
   }
 }
 
-export function deleteBusinessAndAccess(businessId: string) {
+export function deleteBusinessAndAccess(businessId: string, actor?: { id: number; username: string }) {
   const db = getDatabase();
   db.exec("BEGIN IMMEDIATE");
   try {
@@ -325,6 +345,8 @@ export function deleteBusinessAndAccess(businessId: string) {
       ? db.prepare("UPDATE businesses SET active = 0 WHERE id = ?").run(businessId)
       : db.prepare("DELETE FROM businesses WHERE id = ?").run(businessId);
     if (!result.changes) throw new Error("No se encontró el comercio que quieres borrar.");
+    db.prepare("INSERT INTO audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+      .run(actor?.id ?? null, actor?.username ?? null, "delete_business", "business", businessId, `${linked.total} bonos asociados; comercio ${linked.total ? "archivado" : "eliminado"}`, new Date().toISOString());
     db.exec("COMMIT");
     return linked.total > 0;
   } catch (error) {

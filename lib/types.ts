@@ -42,6 +42,8 @@ export type Coupon = {
   startDate: string;
   expiresAt: string;
   status: CouponStatus;
+  deletedAt?: string;
+  deletedBy?: number;
 };
 
 export type Redemption = {
@@ -50,5 +52,36 @@ export type Redemption = {
   businessId: string;
   amountCents: number;
   balanceAfterCents: number;
+  createdAt: string;
+};
+
+export type CouponAuditRecord = {
+  code: string;
+  raceId: string;
+  raceName: string;
+  businessId: string;
+  businessName: string;
+  amountCents: number;
+  usedCents: number;
+  deletedAt: string | null;
+  deletedByUsername: string | null;
+};
+
+export type LoginAuditRecord = {
+  id: number;
+  userId: number;
+  username: string;
+  role: string;
+  signedInAt: string;
+  signedOutAt: string | null;
+};
+
+export type AuditEventRecord = {
+  id: number;
+  actorUsername: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  details: string;
   createdAt: string;
 };

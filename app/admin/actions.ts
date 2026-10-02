@@ -50,15 +50,15 @@ export async function generateRaceCoupons(formData: FormData) {
 }
 
 export async function deleteRaceCoupons(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const id = await raceIdFrom(formData);
-  if (formData.get("understood") !== "true") finish(id, "Confirma que entiendes las consecuencias antes de borrar los bonos.", true);
-  if (!demoWritesEnabled()) finish(id, "El borrado está desactivado hasta conectar la base de datos persistente de producción.", true);
+  if (formData.get("understood") !== "true") finish(id, "Confirma que entiendes las consecuencias antes de archivar los bonos.", true);
+  if (!demoWritesEnabled()) finish(id, "El archivado está desactivado hasta conectar la base de datos persistente de producción.", true);
   let result: { removedCoupons: number; removedRedemptions: number };
   try {
-    result = await deleteRaceCouponsFromStore(id);
+    result = await deleteRaceCouponsFromStore(id, { id: session.id, username: session.username });
   } catch (error) {
-    finish(id, error instanceof Error ? error.message : "No se pudieron borrar los bonos.", true);
+    finish(id, error instanceof Error ? error.message : "No se pudieron archivar los bonos.", true);
   }
-  finish(id, `Se borraron ${result.removedCoupons} bonos y ${result.removedRedemptions} movimientos de gasto. Para volver a disponer de bonos, tendrás que emitir de nuevo el lote completo.`);
+  finish(id, `Se archivaron ${result.removedCoupons} bonos y se conservaron sus ${result.removedRedemptions} movimientos de gasto. Para volver a disponer de bonos, tendrás que emitir de nuevo el lote completo.`);
 }

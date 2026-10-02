@@ -20,6 +20,7 @@ type UserRow = {
   username: string;
   password_hash: string;
   role: Role;
+  is_superuser: boolean;
   first_name: string | null;
   last_name: string | null;
   email: string | null;
@@ -35,6 +36,7 @@ export type SessionUser = Pick<UserRow, "id" | "username" | "role"> & {
   lastName: string | null;
   email: string | null;
   mustChangePassword: boolean;
+  isSuperuser: boolean;
 };
 
 async function passwordHash(password: string, salt = randomBytes(16).toString("hex")) {
@@ -59,7 +61,7 @@ function temporaryPassword() {
   return randomBytes(24).toString("base64url");
 }
 
-function mapSession(row: Pick<UserRow, "id" | "username" | "role" | "business_id" | "first_name" | "last_name" | "email" | "must_change_password">): SessionUser {
+function mapSession(row: Pick<UserRow, "id" | "username" | "role" | "business_id" | "first_name" | "last_name" | "email" | "must_change_password" | "is_superuser">): SessionUser {
   return {
     id: Number(row.id),
     username: row.username,
@@ -69,6 +71,7 @@ function mapSession(row: Pick<UserRow, "id" | "username" | "role" | "business_id
     lastName: row.last_name,
     email: row.email,
     mustChangePassword: row.must_change_password === true,
+    isSuperuser: row.is_superuser === true,
   };
 }
 
@@ -89,7 +92,7 @@ export async function createFirstAdmin(username: string, password: string) {
     await sql.begin(async (tx) => {
       const [existing] = await tx`SELECT id FROM public.users WHERE role = 'admin' LIMIT 1 FOR UPDATE`;
       if (existing) throw new Error("La cuenta de administración ya está creada.");
-      await tx`INSERT INTO public.users (username, password_hash, role) VALUES (${normalized}, ${hash}, 'admin')`;
+      await tx`INSERT INTO public.users (username, password_hash, role, is_superuser) VALUES (${normalized}, ${hash}, 'admin', true)`;
     });
   } catch (error) {
     if (error instanceof Error && error.message.includes("administración")) throw error;
@@ -133,7 +136,11 @@ export async function signInDetailed(username: string, password: string, role: R
   await sql.begin(async (tx) => {
     await tx`UPDATE public.users SET failed_attempts = 0, locked_until = NULL WHERE id = ${user.id}`;
     await tx`INSERT INTO public.sessions (token_hash, user_id, expires_at) VALUES (${tokenHash(token)}, ${user.id}, ${expires.toISOString()})`;
-    if (previousToken) await tx`DELETE FROM public.sessions WHERE token_hash = ${tokenHash(previousToken)}`;
+    if (previousToken) {
+      await tx`UPDATE public.login_events SET signed_out_at = COALESCE(signed_out_at, now()) WHERE session_token_hash = ${tokenHash(previousToken)}`;
+      await tx`DELETE FROM public.sessions WHERE token_hash = ${tokenHash(previousToken)}`;
+    }
+    await tx`INSERT INTO public.login_events (user_id, username, role, session_token_hash, signed_in_at) VALUES (${user.id}, ${user.username}, ${user.role}, ${tokenHash(token)}, now())`;
   });
   jar.set(COOKIE, token, {
     httpOnly: true,
@@ -151,7 +158,7 @@ export async function getSession(): Promise<SessionUser | null> {
   if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token)) return null;
   const [row] = await getPostgres()<UserRow[]>`
     SELECT u.id, u.username, u.role, u.business_id,
-      u.first_name, u.last_name, u.email, u.must_change_password
+      u.first_name, u.last_name, u.email, u.must_change_password, u.is_superuser
     FROM public.sessions s JOIN public.users u ON u.id = s.user_id
     WHERE s.token_hash = ${tokenHash(token)} AND s.expires_at > now()
   `;
@@ -165,6 +172,12 @@ export async function requireAdmin() {
   return session;
 }
 
+export async function requireSuperAdmin() {
+  const session = await requireAdmin();
+  if (!session.isSuperuser) redirect("/admin/carreras");
+  return session;
+}
+
 export async function requireMerchant() {
   const session = await getSession();
   if (session?.role !== "merchant" || !session.businessId || !(await isBusinessActive(session.businessId))) redirect("/comercio/login");
@@ -175,7 +188,10 @@ export async function signOut() {
   if (!hasPostgresDatabase()) return sqliteAuth.signOut();
   const jar = await cookies();
   const token = jar.get(COOKIE)?.value;
-  if (token) await getPostgres()`DELETE FROM public.sessions WHERE token_hash = ${tokenHash(token)}`;
+  if (token) {
+    await getPostgres()`UPDATE public.login_events SET signed_out_at = COALESCE(signed_out_at, now()) WHERE session_token_hash = ${tokenHash(token)}`;
+    await getPostgres()`DELETE FROM public.sessions WHERE token_hash = ${tokenHash(token)}`;
+  }
   jar.delete(COOKIE);
 }
 
@@ -186,16 +202,17 @@ export type AdminAccountSummary = {
   last_name: string | null;
   email: string | null;
   must_change_password: number;
+  is_superuser: boolean;
 };
 
 export async function listAdminAccounts(): Promise<AdminAccountSummary[]> {
   if (!hasPostgresDatabase()) return sqliteAuth.listAdminAccounts();
-  const rows = await getPostgres()<Array<Omit<AdminAccountSummary, "must_change_password"> & { must_change_password: boolean }>>`
-    SELECT id, username, first_name, last_name, email, must_change_password
+  const rows = await getPostgres()<Array<Omit<AdminAccountSummary, "must_change_password" | "is_superuser"> & { must_change_password: boolean; is_superuser: boolean }>>`
+    SELECT id, username, first_name, last_name, email, must_change_password, is_superuser
     FROM public.users WHERE role = 'admin'
     ORDER BY lower(first_name), lower(last_name), lower(username)
   `;
-  return rows.map((row) => ({ ...row, id: Number(row.id), must_change_password: row.must_change_password ? 1 : 0 }));
+  return rows.map((row) => ({ ...row, id: Number(row.id), must_change_password: row.must_change_password ? 1 : 0, is_superuser: row.is_superuser }));
 }
 
 export async function createAdminAccount(firstName: string, lastName: string, email: string) {
@@ -311,8 +328,8 @@ export async function createBusinessWithMerchant(business: Omit<Business, "id">)
   return { business: { ...business, id }, username, password };
 }
 
-export async function deleteBusinessAndAccess(businessId: string) {
-  if (!hasPostgresDatabase()) return sqliteAuth.deleteBusinessAndAccess(businessId);
+export async function deleteBusinessAndAccess(businessId: string, actor?: { id: number; username: string }) {
+  if (!hasPostgresDatabase()) return sqliteAuth.deleteBusinessAndAccess(businessId, actor);
   const sql = getPostgres();
   return sql.begin(async (tx) => {
     const [business] = await tx`SELECT id FROM public.businesses WHERE id = ${businessId} FOR UPDATE`;
@@ -320,11 +337,15 @@ export async function deleteBusinessAndAccess(businessId: string) {
     const [coupons] = await tx`SELECT count(*)::int AS total FROM public.coupons WHERE business_id = ${businessId}`;
     await tx`DELETE FROM public.sessions WHERE user_id IN (SELECT id FROM public.users WHERE business_id = ${businessId} AND role = 'merchant')`;
     await tx`DELETE FROM public.users WHERE business_id = ${businessId} AND role = 'merchant'`;
-    if (Number(coupons.total) > 0) {
-      await tx`UPDATE public.businesses SET active = false, updated_at = now() WHERE id = ${businessId}`;
-      return true;
-    }
-    await tx`DELETE FROM public.businesses WHERE id = ${businessId}`;
+        if (Number(coupons.total) > 0) {
+          await tx`UPDATE public.businesses SET active = false, updated_at = now() WHERE id = ${businessId}`;
+          await tx`INSERT INTO public.audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at)
+            VALUES (${actor?.id ?? null}, ${actor?.username ?? null}, 'delete_business', 'business', ${businessId}, ${`${Number(coupons.total)} bonos asociados; comercio archivado`}, now())`;
+          return true;
+        }
+        await tx`DELETE FROM public.businesses WHERE id = ${businessId}`;
+        await tx`INSERT INTO public.audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at)
+          VALUES (${actor?.id ?? null}, ${actor?.username ?? null}, 'delete_business', 'business', ${businessId}, 'Comercio eliminado', now())`;
     return false;
   });
 }

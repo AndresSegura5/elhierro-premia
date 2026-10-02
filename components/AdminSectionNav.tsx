@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { CalendarDays, ShieldCheck, Store } from "lucide-react";
+import { CalendarDays, History, ShieldCheck, Store } from "lucide-react";
 
-export function AdminSectionNav({ active }: { active?: "races" | "businesses" | "admins" }) {
+export function AdminSectionNav({ active, isSuperuser = false }: { active?: "races" | "businesses" | "admins" | "supervision"; isSuperuser?: boolean }) {
   return (
     <nav className="admin-section-nav" aria-label="Secciones de administración">
       <Link href="/admin/carreras" className={active === "races" ? "is-active" : undefined} aria-current={active === "races" ? "page" : undefined}>
@@ -13,6 +13,9 @@ export function AdminSectionNav({ active }: { active?: "races" | "businesses" | 
       <Link href="/admin/administradores" className={active === "admins" ? "is-active" : undefined} aria-current={active === "admins" ? "page" : undefined}>
         <ShieldCheck size={18} aria-hidden="true" /> Administradores
       </Link>
+      {isSuperuser && <Link href="/admin/supervision" className={active === "supervision" ? "is-active" : undefined} aria-current={active === "supervision" ? "page" : undefined}>
+        <History size={18} aria-hidden="true" /> Supervisión
+      </Link>}
     </nav>
   );
 }

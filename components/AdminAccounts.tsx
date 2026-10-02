@@ -99,7 +99,7 @@ export function AdminAccounts({ accounts, actingAdminId, canWrite }: { accounts:
           const name = [account.first_name, account.last_name].filter(Boolean).join(" ") || account.username;
           const isSelf = account.id === actingAdminId;
           return <article className="admin-account-row" key={account.id}>
-            <span><strong>{name}{isSelf ? " (tú)" : ""}</strong><small>{account.email ?? `Usuario: ${account.username}`}{account.must_change_password ? " · Debe establecer contraseña" : ""}</small></span>
+            <span><strong>{name}{isSelf ? " (tú)" : ""}</strong><small>{account.is_superuser ? "Superusuario" : account.email ?? `Usuario: ${account.username}`}{account.must_change_password ? " · Debe establecer contraseña" : ""}</small></span>
             {isSelf ? <small className="admin-account-self">Tu contraseña se cambia con el botón «Cambiar mi contraseña».</small> : canWrite ? <ResetAdminButton account={account} /> : <button className="button subtle" disabled>Restablecer contraseña</button>}
           </article>;
         })}

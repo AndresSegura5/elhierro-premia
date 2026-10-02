@@ -92,10 +92,10 @@ export async function updateBusinessAction(_state: BusinessAdminState, formData:
 }
 
 export async function deleteBusinessAction(_state: BusinessAdminState, formData: FormData): Promise<BusinessAdminState> {
-  await requireAdmin();
+  const session = await requireAdmin();
   if (!demoWritesEnabled()) return { error: "La gestión de comercios necesita una base de datos persistente habilitada." };
   try {
-    const archived = await deleteBusinessAndAccess(String(formData.get("businessId") ?? ""));
+    const archived = await deleteBusinessAndAccess(String(formData.get("businessId") ?? ""), { id: session.id, username: session.username });
     refreshBusinessPages();
     return { error: "", success: archived ? "Comercio retirado del directorio. Se conserva porque tiene bonos asociados." : "Comercio borrado." };
   } catch (error) {

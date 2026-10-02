@@ -18,12 +18,13 @@ export default async function AdminAccountsPage() {
     last_name: account.last_name,
     email: account.email,
     must_change_password: account.must_change_password,
+    is_superuser: account.is_superuser,
   }));
   return <>
     <Header username={session.username} isAdmin />
     <main className="admin-main">
       <section className="admin-hero"><div><p className="eyebrow">Panel de administración</p><h1>Administradores</h1><p>Gestiona las cuentas de acceso y las contraseñas del equipo.</p></div></section>
-      <AdminSectionNav active="admins" />
+      <AdminSectionNav active="admins" isSuperuser={session.isSuperuser} />
       <AdminAccounts accounts={accounts} actingAdminId={session.id} canWrite={demoWritesEnabled()} />
     </main>
   </>;

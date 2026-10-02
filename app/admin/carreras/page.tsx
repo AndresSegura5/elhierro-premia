@@ -95,7 +95,7 @@ export default async function AdminPage({ searchParams }: {
           </div>
         </section>
 
-        <AdminSectionNav active="races" />
+        <AdminSectionNav active="races" isSuperuser={session.isSuperuser} />
 
         <div className="admin-race-toolbar">
           <AdminRaceSelector races={races} selectedId={race?.id} pathname="/admin/carreras" />

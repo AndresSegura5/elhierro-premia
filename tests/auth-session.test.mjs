@@ -28,8 +28,9 @@ async function loadAuth(filename) {
 
 function fixture(postgres) {
   const db = new DatabaseSync(":memory:");
-  db.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password_hash TEXT, role TEXT, business_id TEXT, demo_business_id TEXT, first_name TEXT, last_name TEXT, email TEXT, must_change_password INTEGER DEFAULT 0, failed_attempts INTEGER DEFAULT 0, locked_until TEXT);
+  db.exec(`CREATE TABLE users (id INTEGER PRIMARY KEY, username TEXT, password_hash TEXT, role TEXT, business_id TEXT, demo_business_id TEXT, first_name TEXT, last_name TEXT, email TEXT, must_change_password INTEGER DEFAULT 0, is_superuser INTEGER DEFAULT 0, failed_attempts INTEGER DEFAULT 0, locked_until TEXT);
     CREATE TABLE sessions (token_hash TEXT PRIMARY KEY, user_id INTEGER, expires_at TEXT);
+    CREATE TABLE login_events (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER, username TEXT, role TEXT, session_token_hash TEXT UNIQUE, signed_in_at TEXT, signed_out_at TEXT);
     CREATE TABLE businesses (id TEXT PRIMARY KEY, active INTEGER);
     INSERT INTO businesses VALUES ('mocanes', 1);`);
   const password = randomBytes(20).toString("hex");
