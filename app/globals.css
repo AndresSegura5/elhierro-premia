@@ -5030,6 +5030,8 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
 .nav-mobile-logout { display: none; }
 .nav-mobile-menu-icon,
 .nav-mobile-menu-arrow { display: none; }
+.main-nav .nav-business .nav-mobile-menu-icon { display: inline-block; width: 16px; height: 16px; }
+.main-nav .nav-business .nav-mobile-menu-arrow { display: none; }
 .nav-merchant-store-icon { width: 16px; height: 16px; }
 .nav-merchant-chevron-down { display: inline-block; }
 .nav-desktop-admin-icon { display: inline-block; }
@@ -5474,7 +5476,7 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
     border-bottom: 1px solid var(--line);
     border-radius: 0;
     background: transparent;
-    font-size: 30px !important;
+    font-size: 24px !important;
     font-weight: 500;
     line-height: 1.2;
     text-align: left;

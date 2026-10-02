@@ -84,8 +84,7 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
               onClick={() => setMenuOpen(false)}
               aria-current={pathname === "/comercio" || pathname.startsWith("/comercio/") ? "page" : undefined}
             >
-              <Store className="nav-business-store-icon" size={16} aria-hidden="true" />
-              <Store className="nav-mobile-menu-icon" size={30} aria-hidden="true" />
+              <Store className="nav-mobile-menu-icon" size={16} aria-hidden="true" />
               Área de comercios
               <ArrowUpRight className="nav-business-desktop-arrow" size={15} aria-hidden="true" />
               <ChevronRight className="nav-mobile-menu-arrow" size={30} aria-hidden="true" />
