@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { FileDown, FileSpreadsheet, Store } from "lucide-react";
+import { ClipboardList, FileDown, FileSpreadsheet, Store } from "lucide-react";
 import { Header } from "@/components/Header";
 import { PageTitleHero } from "@/components/PageTitleHero";
 import { InteractiveTable, type InteractiveTableColumn, type InteractiveTableRow } from "@/components/InteractiveTable";
@@ -54,6 +54,22 @@ export default async function BusinessAccessPage() {
     const balance = formatEuros(entry.balanceAfterCents);
     return { key: String(entry.id), searchValues: { date, code: entry.code, amount, balance }, sortValues: { date: entry.createdAt, code: entry.code, amount: entry.amountCents, balance: entry.balanceAfterCents }, cells: { date, code: <span className="mono">{entry.code}</span>, amount, balance } };
   });
+  const ledgerContent = <>
+    <div className="merchant-ledger-heading">
+      <div><h2>Registro de bonos</h2></div>
+      <div className="merchant-export-actions" aria-label="Exportar movimientos">
+        <a href="/comercio/movimientos/export?format=pdf"><FileDown size={17} aria-hidden="true" />PDF</a>
+        <a href="/comercio/movimientos/export?format=xlsx"><FileSpreadsheet size={17} aria-hidden="true" />Excel</a>
+      </div>
+    </div>
+    <div className="merchant-ledger-metrics"><p><strong>{couponCount}</strong><span>bonos utilizados</span></p><p><strong>{redemptions.length}</strong><span>compras registradas</span></p><p><strong>{formatEuros(totalCents)}</strong><span>importe gastado</span></p></div>
+    {redemptions.length ? <>
+      <h3>Gasto por bono</h3>
+      <InteractiveTable columns={couponColumns} rows={couponRows} ariaLabel="Gasto por bono" label="bonos" emptyMessage="No hay bonos utilizados." initialSort={{ key: "lastUsed", direction: "desc" }} />
+      <h3>Todos los movimientos</h3>
+      <InteractiveTable columns={movementColumns} rows={movementRows} ariaLabel="Todos los movimientos" label="movimientos" emptyMessage="Aún no hay movimientos registrados." initialSort={{ key: "date", direction: "desc" }} />
+    </> : <p className="merchant-ledger-empty">Aún no hay gastos registrados en este comercio.</p>}
+  </>;
   return (
     <>
       <Header merchantName={business.name} merchantAddress={business.address} merchantPhone={business.phone} merchantHours={business.openingHours} username={session.username} />
@@ -70,23 +86,25 @@ export default async function BusinessAccessPage() {
           </div>
         </section>
         <div className="merchant-content">
+          <p className="merchant-mobile-business eyebrow">{business.name}</p>
           <Scanner businessName={business.name} businessId={business.id} />
-          <section className="merchant-ledger" aria-labelledby="merchant-ledger-title">
-            <div className="merchant-ledger-heading">
-              <div><p className="eyebrow">Movimiento de la tienda</p><h2 id="merchant-ledger-title">Registro de bonos</h2></div>
-              <div className="merchant-export-actions" aria-label="Exportar movimientos">
-                <a href="/comercio/movimientos/export?format=pdf"><FileDown size={17} aria-hidden="true" />PDF</a>
-                <a href="/comercio/movimientos/export?format=xlsx"><FileSpreadsheet size={17} aria-hidden="true" />Excel</a>
-              </div>
+          <details className="merchant-ledger merchant-ledger--desktop">
+            <summary className="merchant-ledger-summary">
+              <span><em>Movimiento de la tienda</em></span>
+            </summary>
+            <div className="merchant-ledger-content">
+              {ledgerContent}
             </div>
-            <div className="merchant-ledger-metrics"><p><strong>{couponCount}</strong><span>bonos utilizados</span></p><p><strong>{redemptions.length}</strong><span>compras registradas</span></p><p><strong>{formatEuros(totalCents)}</strong><span>importe gastado</span></p></div>
-            {redemptions.length ? <>
-              <h3 id="gasto-por-bono">Gasto por bono</h3>
-              <InteractiveTable columns={couponColumns} rows={couponRows} ariaLabel="Gasto por bono" label="bonos" emptyMessage="No hay bonos utilizados." initialSort={{ key: "lastUsed", direction: "desc" }} />
-              <h3 id="todos-los-movimientos">Todos los movimientos</h3>
-              <InteractiveTable columns={movementColumns} rows={movementRows} ariaLabel="Todos los movimientos" label="movimientos" emptyMessage="Aún no hay movimientos registrados." initialSort={{ key: "date", direction: "desc" }} />
-            </> : <p className="merchant-ledger-empty">Aún no hay gastos registrados en este comercio.</p>}
-          </section>
+          </details>
+          <details className="merchant-ledger merchant-ledger--mobile">
+            <summary className="merchant-ledger-summary">
+              <ClipboardList size={29} aria-hidden="true" />
+              <span>Movimiento de la tienda</span>
+            </summary>
+            <div className="merchant-ledger-content">
+              {ledgerContent}
+            </div>
+          </details>
         </div>
       </main>
     </>

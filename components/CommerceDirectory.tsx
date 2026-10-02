@@ -7,7 +7,6 @@ import { BusinessPhoto } from "@/components/BusinessPhoto";
 import { StyledSelect } from "@/components/StyledSelect";
 import { PageTitleHero } from "@/components/PageTitleHero";
 import { MunicipalitySilhouette } from "@/components/MunicipalitySilhouette";
-import { localPhoneNumber, phoneLink } from "@/lib/phone";
 import type { Business, Municipality } from "@/lib/types";
 
 const municipalities: Municipality[] = ["Valverde", "La Frontera", "El Pinar"];
@@ -124,11 +123,6 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
                             <span className="directory-business-hours"><Clock3 size={15} aria-hidden="true" /><span>{business.openingHours}</span></span>
                           </span>
                         </button>
-                        {selected && (
-                          <div className="directory-business-detail">
-                            <a href={phoneLink(business.phone)}>{localPhoneNumber(business.phone)}</a>
-                          </div>
-                        )}
                       </li>
                     );
                   })}

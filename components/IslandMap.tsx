@@ -8,7 +8,6 @@ import {
   Hammer,
   HeartPulse,
   MapPin,
-  Phone,
   Shirt,
   ShoppingBasket,
   Store,
@@ -16,7 +15,6 @@ import {
   X,
 } from "lucide-react";
 import type { Business } from "@/lib/types";
-import { localPhoneNumber, phoneLink } from "@/lib/phone";
 import type { Map as LeafletMap, Marker, Path as LeafletPath } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -401,11 +399,6 @@ export function IslandMap({
                 <dd>{activeBusiness.openingHours}</dd>
               </div>
             </dl>
-            <a className="business-map-card-phone" href={phoneLink(activeBusiness.phone)}>
-              <Phone size={16} aria-hidden="true" />
-              <span>{localPhoneNumber(activeBusiness.phone)}</span>
-              <ArrowUpRight size={16} aria-hidden="true" />
-            </a>
           </div>
         </article>
       ) : null}
