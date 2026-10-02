@@ -2865,6 +2865,9 @@ td a {
   background: #eef5f8;
   color: var(--ink);
 }
+.scanner-balance-stack { display: grid; gap: 8px; margin-top: 18px; }
+.scanner-balance-stack .scanner-balance { margin: 0; }
+.scanner-balance-spent { background: #f7fafb !important; }
 .scanner-balance svg { color: var(--accent); }
 .scanner-movements { list-style: none; padding: 0; margin: 16px 0; }
 .scanner-movements li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; }
