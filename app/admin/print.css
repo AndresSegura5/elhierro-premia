@@ -59,10 +59,10 @@
 @media print {
   @page { size: A4 portrait; margin: 0; }
 
-  html, body { background: #fff !important; }
+  html, body { background: #fff; }
   body > footer,
   .site-footer,
-  .coupon-print-toolbar { display: none !important; }
+  .coupon-print-toolbar { display: none; }
   .coupon-print-page { min-height: 0; padding: 0; background: #fff; }
   .coupon-print-document { display: block; }
   .coupon-print-sheet {

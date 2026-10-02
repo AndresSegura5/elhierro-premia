@@ -40,7 +40,7 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-sans);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
 }
@@ -281,7 +281,7 @@ body > main { margin-top: 0; margin-bottom: 0; }
 }
 
 .site-header--overlay {
-  position: absolute !important;
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -425,6 +425,54 @@ body > main { margin-top: 0; margin-bottom: 0; }
   z-index: 2;
   pointer-events: none;
 }
+.hero-voucher {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-width: 0;
+  --stub: 150px;
+  max-width: 500px;
+  justify-self: end;
+  color: #fff;
+  text-decoration: none;
+  filter: drop-shadow(0 18px 30px rgba(2, 12, 22, .38));
+  transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+}
+.hero-voucher:hover { transform: translateY(-4px); }
+.hero-voucher:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; border-radius: 14px; }
+/* The mask punches real ticket notches, so the hero photo shows through them. */
+.hero-voucher-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--stub);
+  min-width: 0;
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(255, 122, 26, .14), transparent 55%),
+    #fffaf2;
+  box-shadow: inset 0 4px 0 var(--accent);
+  -webkit-mask:
+    radial-gradient(circle 11px at calc(100% - var(--stub)) 0, #0000 98%, #000) top / 100% 51% no-repeat,
+    radial-gradient(circle 11px at calc(100% - var(--stub)) 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
+  mask:
+    radial-gradient(circle 11px at calc(100% - var(--stub)) 0, #0000 98%, #000) top / 100% 51% no-repeat,
+    radial-gradient(circle 11px at calc(100% - var(--stub)) 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
+}
+.hero-voucher-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px 16px; min-width: 0; padding: 26px 20px 22px 28px; }
+.hero-voucher-title { display: grid; min-width: 0; color: #0c1622; font: 400 38px/.95 var(--font-display); text-transform: uppercase; }
+.hero-voucher-title em { color: var(--accent-dark); font-style: normal; }
+.hero-voucher-title small { width: fit-content; margin-top: 8px; padding-bottom: 6px; border-bottom: 3px solid var(--accent); font: 700 17px/1.2 var(--font-sans); text-transform: none; }
+/* Ragged brush stroke, echoing the printed Bestial voucher. */
+.hero-voucher-amount { display: grid; justify-items: center; padding: 10px 16px 9px; background: #0c1622; color: #fff; text-transform: uppercase; transform: rotate(-4deg); clip-path: polygon(3% 8%, 22% 2%, 48% 6%, 71% 0, 97% 5%, 100% 38%, 96% 62%, 100% 94%, 74% 98%, 50% 93%, 24% 100%, 2% 95%, 5% 66%, 0 40%); }
+.hero-voucher-amount strong { font: 400 46px/.95 var(--font-display); white-space: nowrap; }
+.hero-voucher-amount small { color: var(--accent); font: 400 12px/1.1 var(--font-display); letter-spacing: .04em; white-space: nowrap; }
+.hero-voucher-action { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 6px; width: fit-content; color: #0c1622; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; transition: gap .25s ease, color .25s ease; }
+.hero-voucher-action svg { flex: 0 0 auto; color: var(--accent-dark); }
+.hero-voucher:hover .hero-voucher-action { gap: 10px; color: var(--accent-dark); }
+.hero-voucher-stub { display: grid; place-items: center; padding: 16px 14px; background: linear-gradient(160deg, var(--accent), var(--accent-dark)); }
+.hero-voucher-qr { width: 100%; aspect-ratio: 1; padding: 6px; border-radius: 8px; background: #fff; }
+.hero-voucher-qr .qr-ticket { display: contents; }
+.hero-voucher-qr .qr-frame { width: 100%; }
+.hero-voucher-qr .qr-frame img { display: block; width: 100%; height: 100%; }
 .hero-inner {
   position: relative;
   z-index: 3;
@@ -1056,6 +1104,8 @@ body > main { margin-top: 0; margin-bottom: 0; }
   margin: 0 0 20px;
   background: #fff;
   color: #000;
+  font-family: var(--font-sans);
+  font-size: 15px;
   font-weight: 700;
 }
 .commerce-copy h2 {
@@ -1106,7 +1156,7 @@ body > main { margin-top: 0; margin-bottom: 0; }
   outline: 0;
   background: transparent;
   color: var(--ink);
-  font: 500 13px var(--font-sans);
+  font: 500 15px var(--font-sans);
 }
 .commerce-search-field input::placeholder {
   color: #626b75;
@@ -1290,7 +1340,7 @@ body > main { margin-top: 0; margin-bottom: 0; }
 .weather-widget--loading { height: 76px; }
 .weather-widget--error { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 12px 14px; color: #fff; font-size: 11px; text-align: left; }
 .weather-widget--error svg { color: #ff9a4d; }
-.municipality-weather-label-marker { position: relative; z-index: 901 !important; width: 104px !important; height: 42px !important; border: 0 !important; background: transparent !important; pointer-events: none !important; }
+.municipality-weather-label-marker { position: relative; z-index: 901; width: 104px; height: 42px; border: 0; background: transparent; pointer-events: none; }
 .municipality-weather-label { display: inline-flex; align-items: center; justify-content: center; gap: 7px; width: max-content; min-width: 104px; margin: 0 auto; color: #fff; text-align: center; text-shadow: 0 2px 5px rgba(7, 22, 38, .8); }
 .municipality-weather-label strong { color: #fff; font-size: 19px; line-height: 1; }
 .municipality-weather-icon { display: inline-flex; color: #ff9a4d; }
@@ -1859,7 +1909,13 @@ body > main { margin-top: 0; margin-bottom: 0; }
 .site-footer .site-footer-brand-logos > strong { margin: 0; font-size: 18px; line-height: 1.08; }
 .site-footer nav > strong {
   margin-bottom: 12px;
-  font-size: 12px;
+  font-size: 14px;
+}
+.site-footer-map > strong,
+.site-footer-contact > strong {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: 0;
 }
 .site-footer-map ul {
   display: grid;
@@ -1875,7 +1931,7 @@ body > main { margin-top: 0; margin-bottom: 0; }
   color: #fff;
   font-style: normal;
 }
-.site-footer-contact > strong { margin-bottom: 6px; }
+.site-footer-contact > strong { margin-bottom: 6px; font-size: 14px; }
 .site-footer-bottom {
   grid-column: 1 / -1;
   display: flex;
@@ -1886,9 +1942,9 @@ body > main { margin-top: 0; margin-bottom: 0; }
   padding-top: 18px;
   border-top: 1px solid rgba(255, 255, 255, .16);
 }
-.site-footer-bottom > small { color: #b5c5be; font-size: 11px; }
+.site-footer-bottom > small { color: #b5c5be; font-size: 13px; }
 .site-footer-legal { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; }
-.site-footer .site-footer-legal > a { color: #c8d4cf; font-size: 11px; }
+.site-footer .site-footer-legal > a { color: #c8d4cf; font-size: 13px; }
 .site-footer .site-footer-legal > a:hover { color: var(--accent); }
 .site-footer-legal > a:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
 .site-footer a,
@@ -2295,19 +2351,19 @@ td a {
 .coupon-voucher-svg-qr .qr-frame { width: min(100%, 225px); height: auto; aspect-ratio: 1; background: #fff; }
 .coupon-voucher-svg-qr .qr-frame img { width: 100%; height: 100%; object-fit: contain; }
 .coupon-voucher-svg-qr .coupon-voucher-code { display: grid; grid-template-columns: 1fr; gap: 2px; width: 100%; min-width: 0; overflow: visible; color: #fff; font-size: 25px; font-weight: 900; line-height: 1.1; white-space: normal; overflow-wrap: anywhere; }
-.coupon-voucher-bestial .coupon-voucher-svg-qr .coupon-voucher-code { background: transparent; }
+.coupon-voucher-bestial .coupon-voucher-svg-qr .coupon-voucher-code { background: #fff; }
 .coupon-voucher-svg-qr .coupon-voucher-code > span { display: block; min-width: 0; overflow-wrap: anywhere; }
 .coupon-voucher-svg-qr .qr-frame,
 .coupon-voucher-svg-qr .coupon-voucher-code { width: min(100%, 225px); }
-.coupon-voucher-svg-qr .coupon-voucher-code { gap: 0; padding: 4px 2px; border-radius: 0 0 4px 4px; background: #fff !important; color: #000 !important; }
+.coupon-voucher-svg-qr .coupon-voucher-code { gap: 0; padding: 4px 2px; border-radius: 0 0 4px 4px; background: #fff; color: #000; }
 .coupon-voucher-svg-business .coupon-voucher-merchant,
 .coupon-voucher-svg-business .coupon-voucher-dates,
 .coupon-voucher-svg-business .coupon-voucher-details,
 .coupon-voucher-svg-business .coupon-voucher-details > p > span,
-.coupon-voucher-svg-business .coupon-voucher-details > p > a { font-size: 34px !important; }
+.coupon-voucher-svg-business .coupon-voucher-details > p > a { font-size: 34px; }
 .coupon-voucher-svg-business .coupon-voucher-merchant,
-.coupon-voucher-svg-business .coupon-voucher-merchant span { font-size: 40px !important; }
-.coupon-voucher-svg-qr .coupon-voucher-code { font-size: 19px !important; }
+.coupon-voucher-svg-business .coupon-voucher-merchant span { font-size: 40px; }
+.coupon-voucher-svg-qr .coupon-voucher-code { font-size: 19px; }
 .coupon-voucher-svg-business .coupon-voucher-dates p { flex-direction: column; align-items: flex-start; gap: 0; }
 .coupon-voucher-back-info { position: absolute; top: 5%; bottom: 5%; left: 4%; display: grid; grid-template-rows: auto 1fr; gap: 3%; width: 44%; padding: 1.4% 1.5%; overflow: hidden; background: #fbf8ee; color: #071626; }
 .coupon-voucher-back-heading { margin: 0; font-size: clamp(14px, 1.45vw, 21px); font-weight: 850; line-height: 1.1; }
@@ -2392,7 +2448,7 @@ td a {
   .coupon-voucher-flip-button svg { transition-duration: .01ms; }
 }
 @media (max-width: 700px) {
-  .coupon-voucher-bestial .coupon-voucher-front { display: block; min-height: 0; padding: 0; overflow: hidden; border: 1px solid #dbe2e8; border-radius: 14px; aspect-ratio: auto; background-color: #f4f7fc; background-image: none !important; box-shadow: 0 16px 34px rgb(7 22 38 / 14%); }
+  .coupon-voucher-bestial .coupon-voucher-front { display: block; min-height: 0; padding: 0; overflow: hidden; border: 1px solid #dbe2e8; border-radius: 14px; aspect-ratio: auto; background-color: #f4f7fc; background-image: none; box-shadow: 0 16px 34px rgb(7 22 38 / 14%); }
   .coupon-voucher-bestial-svg { display: none; }
   .coupon-voucher-bestial-mobile { display: block; }
   .coupon-voucher-bestial-mobile .coupon-voucher-mobile-art { display: block; width: 100%; height: auto; aspect-ratio: 3 / 1; border-bottom: 1px solid #173149; object-fit: cover; }
@@ -3007,8 +3063,8 @@ td a {
 }
 .scanner-balance-stack { display: grid; gap: 8px; margin-top: 18px; }
 .scanner-balance-stack .scanner-balance { margin: 0; }
-.scanner-balance-spent { background: #fff0f0 !important; }
-.scanner-balance-available { background: #eef8f1 !important; }
+.scanner-side .scanner-balance.scanner-balance-spent { background: #fff0f0; }
+.scanner-side .scanner-balance.scanner-balance-available { background: #eef8f1; }
 .scanner-balance svg { color: var(--accent); }
 .scanner-movements { list-style: none; padding: 0; margin: 16px 0; }
 .scanner-movements li { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 12px; }
@@ -3044,7 +3100,7 @@ td a {
 }
 .scanner-more-info[open] summary::after { content: "−"; }
 .scanner-more-info dl { margin: 18px 0 0; }
-.scanner-success { margin-top: 16px !important; padding: 12px 14px; background: #eaf7f3; color: #124c40 !important; }
+.scanner-success { margin-top: 16px; padding: 12px 14px; background: #eaf7f3; color: #124c40; }
 .scanner-pending { display: grid; gap: 8px; margin-top: 14px; padding: 13px 15px; border: 1px solid #e6c777; border-radius: 7px; background: #fff8e5; color: #5a4610; line-height: 1.45; }
 .scanner-pending button { justify-self: start; min-height: 38px; padding: 7px 12px; border: 1px solid #9a7418; border-radius: 5px; background: #fff; color: #5a4610; font: inherit; font-weight: 600; }
 .scanner-balance small { color: var(--muted); font-size: 12px; }
@@ -3079,7 +3135,7 @@ td a {
 .scanner-modal--feedback .scanner-modal-icon { width: 52px; height: 52px; }
 .scanner-modal.scanner-modal--feedback h2 { font-size: 36px; }
 .scanner-modal.scanner-modal--feedback p { max-width: 430px; font-size: 19px; line-height: 1.55; }
-.scanner-modal--feedback .button { min-width: 190px !important; min-height: 54px; font-size: 17px; }
+.scanner-modal--feedback .button { min-width: 190px; min-height: 54px; font-size: 17px; }
 .scanner-modal--notice .scanner-modal-icon { color: #237a4d; }
 .scanner-modal-close {
   position: absolute;
@@ -3302,7 +3358,7 @@ td a {
     position: relative;
   }
   .site-header--overlay {
-    position: absolute !important;
+    position: absolute;
     background: #fff;
     border-bottom: 1px solid var(--line);
   }
@@ -3364,7 +3420,7 @@ td a {
     color: var(--ink);
   }
   .site-header--menu-open {
-    position: fixed !important;
+    position: fixed;
     inset: 0;
     z-index: 1000;
     display: flex;
@@ -3420,12 +3476,12 @@ td a {
     border-radius: 0;
     background: transparent;
     color: var(--ink);
-    font-size: 30px !important;
+    font-size: 30px;
     font-weight: 500;
     line-height: 1.35;
   }
   .site-header--menu-open .nav-merchant-menu > summary span {
-    font-size: 30px !important;
+    font-size: 30px;
     font-weight: 500;
   }
   .site-header--menu-open .nav-merchant-menu > summary > svg:first-child { display: none; }
@@ -3470,7 +3526,7 @@ td a {
   }
   .site-header--menu-open .nav-merchant-popover strong {
     margin-bottom: 14px;
-    font-size: 19px !important;
+    font-size: 19px;
   }
   .site-header--menu-open .nav-merchant-popover button {
     border-color: var(--accent);
@@ -3495,10 +3551,10 @@ td a {
     display: none;
   }
   .nav-admin {
-    display: none !important;
+    display: none;
   }
   .site-header--menu-open .nav-account-menu { display: block; width: 100%; padding-top: 10px; border-top: 1px solid var(--line); }
-  .site-header--menu-open .nav-account-menu > .nav-admin { display: flex !important; justify-content: flex-start; height: var(--button-height); min-height: var(--button-height); border-bottom: 1px solid var(--line); }
+  .site-header--menu-open .nav-account-menu > .nav-admin { display: flex; justify-content: flex-start; height: var(--button-height); min-height: var(--button-height); border-bottom: 1px solid var(--line); }
   .site-header--menu-open .nav-account-popover { position: static; width: 100%; padding: 12px 0 16px 24px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
   .hero-banner {
     padding-top: 197px;
@@ -3824,7 +3880,7 @@ td a {
     scroll-behavior: auto;
   }
   * {
-    transition: none !important;
+    transition: none;
   }
 }
 .island-map {
@@ -3892,38 +3948,38 @@ td a {
   outline: 2px solid var(--accent);
   box-shadow: 0 0 0 4px rgba(255, 122, 26, .22), 0 4px 12px rgba(0, 24, 54, .4);
 }
-.leaflet-control-attribution {
+.island-map.leaflet-container .leaflet-control-attribution {
   max-width: calc(100% - 58px);
   width: max-content;
   min-height: 0;
-  padding: 0 !important;
+  padding: 0;
   border: 0;
   border-radius: 0;
-  background: transparent !important;
+  background: transparent;
   color: #071626;
-  font-size: 9px !important;
+  font-size: 9px;
   line-height: 1.2;
   white-space: nowrap;
   box-shadow: none;
 }
-.leaflet-bottom .leaflet-control-attribution { margin: 0 8px 8px; }
-.leaflet-control-attribution a {
-  color: #071626 !important;
+.island-map .leaflet-bottom .leaflet-control-attribution { margin: 0 8px 8px; }
+.island-map.leaflet-container .leaflet-control-attribution a {
+  color: #071626;
   font: inherit;
   text-decoration: none;
 }
-.leaflet-control-attribution a:visited { color: #071626 !important; }
-.leaflet-control-attribution a:hover {
-  color: #071626 !important;
+.island-map.leaflet-container .leaflet-control-attribution a:visited { color: #071626; }
+.island-map.leaflet-container .leaflet-control-attribution a:hover {
+  color: #071626;
   text-decoration: underline;
 }
 .map-attribution-copyright { display: inline-block; color: #071626; font: inherit; line-height: inherit; vertical-align: baseline; }
 .leaflet-bar,
 .leaflet-bar a {
-  border-radius: 0 !important;
+  border-radius: 0;
 }
 .leaflet-touch .leaflet-bar {
-  border-color: var(--line) !important;
+  border-color: var(--line);
 }
 @media print {
   .site-header,
@@ -4027,7 +4083,7 @@ td a {
     background: transparent;
     color: #fff;
     font-family: var(--font-display);
-    font-size: clamp(76px, 7.4vw, 104px) !important;
+    font-size: clamp(76px, 7.4vw, 104px);
     font-weight: 400;
     line-height: 1;
     text-align: right;
@@ -4058,7 +4114,7 @@ td a {
     background: transparent;
     color: #fff;
     font-family: var(--font-display);
-    font-size: clamp(76px, 7.4vw, 104px) !important;
+    font-size: clamp(76px, 7.4vw, 104px);
     font-weight: 400;
     letter-spacing: .025em;
     line-height: 1;
@@ -4077,10 +4133,10 @@ td a {
   .hero-inner .page-title-hero--home .page-title-hero-link-label {
     min-width: 0;
     flex: 1 1 auto;
-    font-family: inherit !important;
-    font-size: inherit !important;
-    font-weight: inherit !important;
-    line-height: inherit !important;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    line-height: inherit;
     text-align: right;
     overflow-wrap: break-word;
   }
@@ -4206,9 +4262,9 @@ td a {
     max-width: 440px;
     margin: 14px auto 0;
     color: rgba(255, 255, 255, .92);
-    font-family: var(--font-display) !important;
-    font-size: clamp(22px, 1.6vw, 26px) !important;
-    font-weight: 400 !important;
+    font-family: var(--font-display);
+    font-size: clamp(22px, 1.6vw, 26px);
+    font-weight: 400;
     line-height: 1.25;
     text-align: center;
   }
@@ -4228,9 +4284,9 @@ td a {
     margin-top: 12px;
     padding: 7px 0;
     color: #fff;
-    font-family: var(--font-display) !important;
-    font-size: clamp(32px, 2.6vw, 42px) !important;
-    font-weight: 400 !important;
+    font-family: var(--font-display);
+    font-size: clamp(32px, 2.6vw, 42px);
+    font-weight: 400;
     text-decoration: none;
     text-transform: uppercase;
     transition: color .18s ease;
@@ -4348,7 +4404,7 @@ td a {
     padding-top: 34px;
   }
   .commerce-copy .eyebrow {
-    margin-bottom: 36px !important;
+    margin-bottom: 47px;
   }
   .commerce-copy h2 {
     font-size: 58px;
@@ -4358,16 +4414,16 @@ td a {
   }
   .commerce-intro {
     max-width: 620px;
-    margin-top: 36px !important;
-    font-size: 13px;
+    margin-top: 47px;
+    font-size: 17px;
     line-height: 1.45;
   }
   .commerce-search {
-    margin-top: 42px !important;
+    margin-top: 44px;
   }
   .commerce-categories {
     max-width: 100%;
-    margin-top: 30px !important;
+    margin-top: 39px;
     gap: 10px;
   }
   .commerce-categories > button {
@@ -4381,7 +4437,7 @@ td a {
     border-radius: 999px;
     background: #fff;
     color: var(--ink);
-    font: 500 11px var(--font-sans);
+    font: 500 15px var(--font-sans);
     cursor: pointer;
   }
   .commerce-categories > button:hover {
@@ -4904,7 +4960,7 @@ td a {
 .bono-race-card-body strong {
   display: block;
   margin-bottom: 8px;
-  font-size: 20px !important;
+  font-size: 20px;
   line-height: 1.2;
   color: var(--ink);
 }
@@ -4912,7 +4968,7 @@ td a {
   margin: 0;
   max-width: 62%;
   color: var(--muted);
-  font-size: 16px !important;
+  font-size: 16px;
   line-height: 1.4;
 }
 .bono-race-card-meta {
@@ -5121,7 +5177,7 @@ td a {
   }
   .bono-race-card-body p { max-width: 62%; }
   .bono-race-card-body strong {
-    font-size: 20px !important;
+    font-size: 20px;
   }
   .bono-race-logo {
     right: 12px;
@@ -5184,17 +5240,10 @@ td a {
 .admin-race-selector .styled-select { width: 100%; }
 .business-form-grid .styled-select-trigger { border-radius: 7px; }
 
-/* Shared type scale: all non-heading content uses the same 15px size. */
-body,
-body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *):not(.race-rail-copy, .race-rail-copy *) {
-  font-size: 15px !important;
-  font-family: var(--font-sans) !important;
-}
-
-/* Keep the institutional wordmark compact instead of applying the body type scale. */
+/* Keep the institutional wordmark compact. */
 .brand-affiliations,
 .brand-affiliations * {
-  font-size: 15px !important;
+  font-size: 15px;
 }
 
 /* Simple, compact primary navigation */
@@ -5252,7 +5301,7 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *):not(.race-r
 .nav-account-menu > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .nav-mobile-label { display: none; }
 .nav-menu-label { min-width: 0; }
-.main-nav .nav-menu-label { font-size: inherit !important; font-weight: inherit; }
+.main-nav .nav-menu-label { font-size: inherit; font-weight: inherit; }
 .nav-mobile-logout { display: none; }
 .nav-mobile-menu-icon,
 .nav-mobile-menu-arrow { display: none; }
@@ -5293,7 +5342,7 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *):not(.race-r
   }
   .site-header--menu-open .nav-merchant-menu > summary,
   .site-header--menu-open .nav-account-menu > .nav-admin {
-    display: flex !important;
+    display: flex;
     justify-content: center;
     gap: 12px;
     width: 100%;
@@ -5305,7 +5354,7 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *):not(.race-r
     border-radius: 0;
     background: transparent;
     color: #071626;
-    font-size: 30px !important;
+    font-size: 30px;
     font-weight: 500;
     line-height: 1.35;
     text-align: center;
@@ -5313,7 +5362,7 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *):not(.race-r
   .site-header--menu-open .main-nav a[aria-current="page"] { border: 0; background: transparent; color: var(--accent-dark); }
   .site-header--menu-open .main-nav > .nav-business:hover { border: 0; }
   .site-header--menu-open .main-nav svg { display: none; }
-  .site-header--menu-open .nav-mobile-label { display: inline; font-size: inherit !important; }
+  .site-header--menu-open .nav-mobile-label { display: inline; font-size: inherit; }
   .site-header--menu-open .nav-account-menu { width: 100%; padding: 0; border: 0; }
   .site-header--menu-open .nav-account-popover { padding: 12px 0; text-align: center; }
 }
@@ -5433,6 +5482,10 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *):not(.race-r
 }
 
 @media (max-width: 599px) {
+  .hero-voucher { --stub: 104px; justify-self: stretch; }
+  .hero-voucher-info { grid-template-columns: 1fr; justify-items: start; gap: 14px; padding: 18px 14px 16px 18px; }
+  .hero-voucher-title { font-size: 28px; }
+  .hero-voucher-amount strong { font-size: 32px; }
   .home-inner .race-rail { grid-template-columns: 1fr; gap: 12px; }
   .race-rail-item { min-height: 156px; }
   .race-rail-overlay {
@@ -5445,6 +5498,9 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *):not(.race-r
 }
 
 @media (max-width: 359px) {
+  .hero-voucher { --stub: 96px; }
+  .hero-voucher-title { font-size: 24px; }
+  .hero-voucher-stub { padding: 12px 10px; }
   .hero-inner .page-title-hero--home { align-items: stretch; flex-direction: column; }
   .page-title-hero--home h2 { font-size: 26px; }
   .race-rail-meta { grid-template-columns: 38px minmax(0, 1fr) 28px; gap: 10px; padding: 14px; }
@@ -5540,7 +5596,6 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *):not(.race-r
     height: 17px;
   }
 }
-
 @media (hover: none) and (max-width: 1050px) {
   .race-rail-item:hover,
   .race-rail-item:hover .race-rail-photo,
@@ -5647,15 +5702,12 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *):not(.race-r
   .scanner-desktop { grid-template-columns: 1fr; gap: 16px; }
 }
 
-/* The shared 15px !important rule below normalizes page copy; vouchers need their requested 19px scale. */
-body .coupon-voucher-stack,
-body .coupon-voucher-stack * { font-size: 19px !important; }
-
-/* Keep every Bestial business field at the same size despite the stack-wide !important rule. */
-body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-business,
-body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-business * { font-size: 21px !important; }
-body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-merchant,
-body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-merchant * { font-size: 26px !important; }
+/* Voucher type scales are scoped to their own elements. */
+.coupon-voucher-stack { font-size: 19px; }
+.coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-business,
+.coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-business > p { font-size: 21px; }
+.coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-merchant,
+.coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-merchant span { font-size: 26px; }
 body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-merchant {
   position: relative;
   padding-bottom: 14px;
@@ -5683,7 +5735,7 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
   .site-header--menu-open .main-nav > a.nav-business,
   .site-header--menu-open .nav-merchant-menu > summary,
   .site-header--menu-open .nav-account-menu > .nav-admin {
-    display: grid !important;
+    display: grid;
     grid-template-columns: 26px minmax(0, 1fr) 22px;
     align-items: center;
     justify-content: start;
@@ -5697,7 +5749,7 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
     border-bottom: 1px solid var(--line);
     border-radius: 0;
     background: transparent;
-    font-size: var(--mobile-nav-font-size) !important;
+    font-size: var(--mobile-nav-font-size);
     font-weight: 500;
     line-height: 1.3;
     text-align: left;
@@ -5709,14 +5761,14 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
   .site-header--menu-open .nav-merchant-menu > summary .nav-mobile-menu-arrow,
   .site-header--menu-open .nav-admin .nav-mobile-menu-icon,
   .site-header--menu-open .nav-admin .nav-mobile-menu-arrow {
-    display: block !important;
+    display: block;
     flex: 0 0 auto;
   }
 
   .site-header--menu-open .main-nav > a .nav-mobile-menu-icon { grid-column: 1; }
   .site-header--menu-open .main-nav > a .nav-menu-label { grid-column: 2; min-width: 0; overflow-wrap: anywhere; }
   .site-header--menu-open .main-nav > a .nav-mobile-menu-arrow { grid-column: 3; margin-left: 0; }
-  .site-header--menu-open .main-nav > a .nav-menu-label { font-size: inherit !important; font-weight: inherit; }
+  .site-header--menu-open .main-nav > a .nav-menu-label { font-size: inherit; font-weight: inherit; }
 
   .site-header--menu-open .nav-account-menu {
     display: block;
@@ -5742,7 +5794,7 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
     width: 22px;
     height: 22px;
     margin-left: auto;
-    color: #607289 !important;
+    color: #607289;
   }
 
   .site-header--menu-open .nav-merchant-menu {
@@ -5763,12 +5815,12 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: inherit !important;
+    font-size: inherit;
     font-weight: 500;
   }
 
   .site-header--menu-open .nav-merchant-menu > summary .nav-merchant-chevron-down {
-    display: none !important;
+    display: none;
   }
 
   .site-header--menu-open .nav-merchant-menu[open] > summary,
@@ -5802,7 +5854,7 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
     display: block;
     margin: 0 0 22px;
     color: var(--ink);
-    font-size: 27px !important;
+    font-size: 27px;
     font-weight: 700;
     line-height: 1.15;
   }
@@ -5830,7 +5882,7 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
   .site-header--menu-open .nav-merchant-details > span:last-child { padding-bottom: 0; border-bottom: 0; }
 
   .site-header--menu-open .nav-merchant-details > span > svg {
-    display: block !important;
+    display: block;
     width: 52px;
     height: 52px;
     margin: 0;
@@ -5848,7 +5900,7 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
 
   .site-header--menu-open .nav-merchant-details small {
     color: #66758b;
-    font-size: 12px !important;
+    font-size: 12px;
     font-weight: 500;
     letter-spacing: .1em;
     line-height: 1.2;
@@ -5857,7 +5909,7 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
 
   .site-header--menu-open .nav-merchant-details b {
     color: var(--ink);
-    font-size: 18px !important;
+    font-size: 18px;
     font-weight: 500;
     line-height: 1.4;
     overflow-wrap: anywhere;
@@ -5877,23 +5929,23 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
     border-radius: 18px;
     background: var(--ink);
     color: #fff;
-    font-size: 23px !important;
+    font-size: 23px;
     font-weight: 700;
     text-align: left;
   }
 
   .site-header--menu-open .nav-merchant-logout button svg {
-    display: block !important;
+    display: block;
     width: 30px;
     height: 30px;
     flex: 0 0 auto;
   }
 
-  .site-header--menu-open .nav-admin .nav-desktop-admin-icon { display: none !important; }
+  .site-header--menu-open .nav-admin .nav-desktop-admin-icon { display: none; }
   .site-header--menu-open .nav-admin .nav-mobile-menu-icon,
-  .site-header--menu-open .nav-admin .nav-mobile-menu-arrow { display: block !important; }
+  .site-header--menu-open .nav-admin .nav-mobile-menu-arrow { display: block; }
   .site-header--menu-open .nav-admin .nav-mobile-menu-icon { color: var(--ink); }
-  .site-header--menu-open .nav-mobile-label { display: inline; font-size: inherit !important; font-weight: 500; }
+  .site-header--menu-open .nav-mobile-label { display: inline; font-size: inherit; font-weight: 500; }
   .site-header--menu-open .nav-account-menu .nav-account-popover form { display: none; }
 
   .site-header--menu-open .nav-mobile-logout {
@@ -5917,13 +5969,13 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
     border-radius: 18px;
     background: var(--ink);
     color: #fff;
-    font-size: 23px !important;
+    font-size: 23px;
     font-weight: 700;
     text-align: left;
   }
 
   .site-header--menu-open .nav-mobile-logout button svg {
-    display: block !important;
+    display: block;
     width: 30px;
     height: 30px;
     flex: 0 0 auto;

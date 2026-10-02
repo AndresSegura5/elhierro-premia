@@ -12,7 +12,7 @@
 .directory-map-expand { position: absolute; z-index: 1001; top: 13px; right: 13px; display: grid; place-items: center; width: var(--button-height); height: var(--button-height); border: 1px solid #dce5eb; border-radius: 6px; background: #fff; color: #071626; box-shadow: 0 3px 12px rgba(7, 22, 38, .16); cursor: pointer; }
 .directory-map-expand:hover { border-color: var(--accent); color: var(--accent-dark); }
 .directory-map .leaflet-control-attribution a { color: #071626; }
-.directory-map .leaflet-control-zoom { overflow: hidden; border: 1px solid #dce5eb; border-radius: 6px !important; background: #fff; box-shadow: 0 3px 12px rgba(14, 40, 64, .16); }
+.directory-map .leaflet-control-zoom { overflow: hidden; border: 1px solid #dce5eb; border-radius: 6px; background: #fff; box-shadow: 0 3px 12px rgba(14, 40, 64, .16); }
 .directory-map .leaflet-control-zoom a { width: var(--button-height); height: var(--button-height); border-color: #dce5eb; background: #fff; color: #071626; line-height: var(--button-height); }
 .directory-map .leaflet-control-zoom a:hover { background: #f4f8fa; color: var(--accent-dark); }
 .directory-map--expanded { position: fixed; z-index: 2000; inset: 18px; width: auto; height: auto; border-radius: 6px; box-shadow: 0 0 0 100vmax rgba(5, 18, 30, .72); }

@@ -2,8 +2,7 @@ import type { CSSProperties } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { CommerceSection } from "@/components/CommerceSection";
 import { Header } from "@/components/Header";
-import { PageTitleHero } from "@/components/PageTitleHero";
-import { QRPattern } from "@/components/QRPattern";
+import { HeroVoucher } from "@/components/HeroVoucher";
 import { listBusinesses, listRaces } from "@/lib/store";
 import { formatDate } from "@/lib/bonos";
 
@@ -32,7 +31,6 @@ export default async function Home() {
             />
           ))}
         </div>
-        <QRPattern className="hero-qr" />
         <div className="hero-inner">
           <div className="hero-kicker-spacer" aria-hidden="true" />
           <h1 className="hero-headline">
@@ -43,14 +41,7 @@ export default async function Home() {
             </span>
             <span className="hero-subline">Deporte y comercio</span>
           </h1>
-          <PageTitleHero
-            variant="home"
-            headingLevel={2}
-            linkHref="/bono"
-            linkLabel="Consulta tu bono"
-          >
-            Bono de <em>30€</em>
-          </PageTitleHero>
+          <HeroVoucher />
         </div>
       </section>
       <main className="home-main">
