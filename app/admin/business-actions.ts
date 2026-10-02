@@ -95,11 +95,11 @@ export async function deleteBusinessAction(_state: BusinessAdminState, formData:
   const session = await requireAdmin();
   if (!demoWritesEnabled()) return { error: "La gestión de comercios necesita una base de datos persistente habilitada." };
   try {
-    const archived = await deleteBusinessAndAccess(String(formData.get("businessId") ?? ""), { id: session.id, username: session.username });
+    await deleteBusinessAndAccess(String(formData.get("businessId") ?? ""), { id: session.id, username: session.username });
     refreshBusinessPages();
-    return { error: "", success: archived ? "Comercio retirado del directorio. Se conserva porque tiene bonos asociados." : "Comercio borrado." };
+    return { error: "", success: "Comercio retirado del directorio. Su ficha y su histórico quedan conservados." };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "No se pudo borrar el comercio." };
+    return { error: error instanceof Error ? error.message : "No se pudo archivar el comercio." };
   }
 }
 

@@ -341,14 +341,12 @@ export function deleteBusinessAndAccess(businessId: string, actor?: { id: number
     const merchantIds = db.prepare("SELECT id FROM users WHERE business_id = ? AND role = 'merchant'").all(businessId) as Array<{ id: number }>;
     for (const merchant of merchantIds) db.prepare("DELETE FROM sessions WHERE user_id = ?").run(merchant.id);
     db.prepare("DELETE FROM users WHERE business_id = ? AND role = 'merchant'").run(businessId);
-    const result = linked.total
-      ? db.prepare("UPDATE businesses SET active = 0 WHERE id = ?").run(businessId)
-      : db.prepare("DELETE FROM businesses WHERE id = ?").run(businessId);
+    const result = db.prepare("UPDATE businesses SET active = 0 WHERE id = ?").run(businessId);
     if (!result.changes) throw new Error("No se encontró el comercio que quieres borrar.");
     db.prepare("INSERT INTO audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
-      .run(actor?.id ?? null, actor?.username ?? null, "delete_business", "business", businessId, `${linked.total} bonos asociados; comercio ${linked.total ? "archivado" : "eliminado"}`, new Date().toISOString());
+      .run(actor?.id ?? null, actor?.username ?? null, "delete_business", "business", businessId, `${linked.total} bonos asociados; comercio archivado`, new Date().toISOString());
     db.exec("COMMIT");
-    return linked.total > 0;
+    return true;
   } catch (error) {
     db.exec("ROLLBACK");
     throw error;

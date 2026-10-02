@@ -337,16 +337,10 @@ export async function deleteBusinessAndAccess(businessId: string, actor?: { id: 
     const [coupons] = await tx`SELECT count(*)::int AS total FROM public.coupons WHERE business_id = ${businessId}`;
     await tx`DELETE FROM public.sessions WHERE user_id IN (SELECT id FROM public.users WHERE business_id = ${businessId} AND role = 'merchant')`;
     await tx`DELETE FROM public.users WHERE business_id = ${businessId} AND role = 'merchant'`;
-        if (Number(coupons.total) > 0) {
-          await tx`UPDATE public.businesses SET active = false, updated_at = now() WHERE id = ${businessId}`;
-          await tx`INSERT INTO public.audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at)
-            VALUES (${actor?.id ?? null}, ${actor?.username ?? null}, 'delete_business', 'business', ${businessId}, ${`${Number(coupons.total)} bonos asociados; comercio archivado`}, now())`;
-          return true;
-        }
-        await tx`DELETE FROM public.businesses WHERE id = ${businessId}`;
+        await tx`UPDATE public.businesses SET active = false, updated_at = now() WHERE id = ${businessId}`;
         await tx`INSERT INTO public.audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at)
-          VALUES (${actor?.id ?? null}, ${actor?.username ?? null}, 'delete_business', 'business', ${businessId}, 'Comercio eliminado', now())`;
-    return false;
+          VALUES (${actor?.id ?? null}, ${actor?.username ?? null}, 'delete_business', 'business', ${businessId}, ${`${Number(coupons.total)} bonos asociados; comercio archivado`}, now())`;
+    return true;
   });
 }
 

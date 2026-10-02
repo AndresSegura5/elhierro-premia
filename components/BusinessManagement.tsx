@@ -312,7 +312,7 @@ function BusinessRow({ business, active, account, categories }: { business: Busi
       <td><code className="business-table-password">{!active ? "Acceso desactivado" : account ? "Clave privada; restablecer para renovarla" : "Sin acceso"}</code></td>
       <td><div className="business-table-actions">
         {active && <button className="business-icon-action" type="button" onClick={() => setEditOpen(true)} aria-label={`Editar ${business.name}`} title="Editar"><Pencil size={17} /></button>}
-        {active ? <button className="business-icon-action is-danger" type="button" onClick={() => setConfirmDeleteOpen(true)} aria-label={`Borrar ${business.name}`} title="Borrar"><Trash2 size={17} /></button> : <form action={restoreAction}><input type="hidden" name="businessId" value={business.id} /><button className="business-icon-action" type="submit" disabled={restoring} aria-label={`Reactivar ${business.name}`} title="Reactivar"><RotateCcw size={17} /></button></form>}
+        {active ? <button className="business-icon-action is-danger" type="button" onClick={() => setConfirmDeleteOpen(true)} aria-label={`Archivar ${business.name}`} title="Archivar"><Trash2 size={17} /></button> : <form action={restoreAction}><input type="hidden" name="businessId" value={business.id} /><button className="business-icon-action" type="submit" disabled={restoring} aria-label={`Reactivar ${business.name}`} title="Reactivar"><RotateCcw size={17} /></button></form>}
       </div></td>
     </tr>
     {(deleteState.error || deleteState.success || restoreState.error || restoreState.success || restoreState.credentials) && <tr><td colSpan={6}><CredentialResult state={deleteState.error || deleteState.success ? deleteState : restoreState} /></td></tr>}
@@ -324,13 +324,13 @@ function BusinessRow({ business, active, account, categories }: { business: Busi
       </form>
       <CredentialResult state={updateState} />
     </Modal>}
-    {confirmDeleteOpen && <Modal title="Borrar comercio" onClose={() => setConfirmDeleteOpen(false)}>
-      <p className="business-delete-confirm-copy">¿Quieres borrar <strong>{business.name}</strong>? Si tiene bonos asociados, se retirará del directorio y se conservará su historial. Si no, se eliminará del sistema.</p>
+    {confirmDeleteOpen && <Modal title="Archivar comercio" onClose={() => setConfirmDeleteOpen(false)}>
+      <p className="business-delete-confirm-copy">¿Quieres retirar <strong>{business.name}</strong> del directorio? Su ficha, sus bonos y sus movimientos quedarán conservados para supervisión.</p>
       <div className="business-modal-actions">
         <button className="button subtle" type="button" onClick={() => setConfirmDeleteOpen(false)}>Cancelar</button>
         <form action={deleteAction} onSubmit={() => setConfirmDeleteOpen(false)}>
           <input type="hidden" name="businessId" value={business.id} />
-          <button className="button business-delete-confirm-button" type="submit" disabled={deleting}><Trash2 size={16} aria-hidden="true" />{deleting ? "Borrando…" : "Borrar comercio"}</button>
+          <button className="button business-delete-confirm-button" type="submit" disabled={deleting}><Trash2 size={16} aria-hidden="true" />{deleting ? "Archivando…" : "Archivar comercio"}</button>
         </form>
       </div>
       <CredentialResult state={deleteState} />
