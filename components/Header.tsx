@@ -93,13 +93,18 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
           {username && isAdmin ? (
             <>
               <details className="nav-account-menu" ref={accountMenuRef}>
-                <summary className="nav-admin nav-icon" title="Cuenta" aria-label="Abrir opciones de cuenta"><UserRound size={19} aria-hidden="true" /><span className="nav-mobile-label">Mi cuenta</span></summary>
+                <summary className="nav-admin nav-icon" title="Cuenta" aria-label="Abrir opciones de cuenta">
+                  <UserRound className="nav-desktop-admin-icon" size={19} aria-hidden="true" />
+                  <UserRound className="nav-mobile-menu-icon" size={30} aria-hidden="true" />
+                  <span className="nav-menu-label nav-mobile-label">Mi cuenta</span>
+                  <ChevronRight className="nav-mobile-menu-arrow" size={30} aria-hidden="true" />
+                </summary>
                 <div className="nav-account-popover nav-merchant-popover">
                   <strong>{username}</strong>
                   <form action={logout}><button type="submit">Cerrar sesión</button></form>
                 </div>
               </details>
-              <form action={logout} className="nav-mobile-logout"><button type="submit">Cerrar sesión</button></form>
+              <form action={logout} className="nav-mobile-logout"><button type="submit"><LogOut size={25} aria-hidden="true" />Cerrar sesión</button></form>
             </>
           ) : (
             <Link href="/admin" onClick={() => setMenuOpen(false)} className="nav-admin nav-icon" title="Administración" aria-label="Administración" aria-current={pathname.startsWith("/admin") ? "page" : undefined}>

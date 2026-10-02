@@ -5459,7 +5459,8 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
 
   .site-header--menu-open .main-nav > a,
   .site-header--menu-open .main-nav > a.nav-business,
-  .site-header--menu-open .nav-merchant-menu > summary {
+  .site-header--menu-open .nav-merchant-menu > summary,
+  .site-header--menu-open .nav-account-menu > .nav-admin {
     display: grid !important;
     grid-template-columns: 26px minmax(0, 1fr) 22px;
     align-items: center;
@@ -5495,6 +5496,16 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
   .site-header--menu-open .main-nav > a .nav-mobile-menu-arrow { grid-column: 3; margin-left: 0; }
   .site-header--menu-open .main-nav > a .nav-menu-label { font-size: inherit !important; font-weight: inherit; }
 
+  .site-header--menu-open .nav-account-menu {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+  }
+  .site-header--menu-open .nav-account-menu > .nav-admin .nav-mobile-menu-icon { grid-column: 1; }
+  .site-header--menu-open .nav-account-menu > .nav-admin .nav-menu-label { grid-column: 2; min-width: 0; }
+  .site-header--menu-open .nav-account-menu > .nav-admin .nav-mobile-menu-arrow { grid-column: 3; margin-left: 0; }
+
   .site-header--menu-open .main-nav > a .nav-mobile-menu-icon,
   .site-header--menu-open .nav-merchant-menu > summary .nav-merchant-store-icon,
   .site-header--menu-open .nav-admin .nav-mobile-menu-icon {
@@ -5504,7 +5515,8 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
   }
 
   .site-header--menu-open .main-nav > a .nav-mobile-menu-arrow,
-  .site-header--menu-open .nav-merchant-menu > summary .nav-mobile-menu-arrow {
+  .site-header--menu-open .nav-merchant-menu > summary .nav-mobile-menu-arrow,
+  .site-header--menu-open .nav-account-menu > .nav-admin .nav-mobile-menu-arrow {
     width: 22px;
     height: 22px;
     margin-left: auto;
@@ -5660,6 +5672,39 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
   .site-header--menu-open .nav-admin .nav-mobile-menu-arrow { display: block !important; }
   .site-header--menu-open .nav-admin .nav-mobile-menu-icon { color: var(--ink); }
   .site-header--menu-open .nav-mobile-label { display: inline; font-size: inherit !important; font-weight: 500; }
+
+  .site-header--menu-open .nav-mobile-logout {
+    display: block;
+    width: 100%;
+    margin: 18px 0 0;
+    padding: 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .site-header--menu-open .nav-mobile-logout button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 18px;
+    width: 100%;
+    min-height: 76px;
+    padding: 0 24px;
+    border: 1px solid var(--ink);
+    border-radius: 18px;
+    background: var(--ink);
+    color: #fff;
+    font-size: 23px !important;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .site-header--menu-open .nav-mobile-logout button svg {
+    display: block !important;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+  }
 }
 
 @media (max-width: 359px) {
