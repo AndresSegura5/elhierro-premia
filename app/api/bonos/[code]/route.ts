@@ -42,7 +42,7 @@ export async function POST(request: Request, { params }: Context) {
   if (!session) return NextResponse.json({ error: "Inicia sesión como comercio para registrar gastos." }, { status: 401 });
   if (session.role !== "merchant") return NextResponse.json({ error: "Inicia sesión como comercio para registrar gastos." }, { status: 403 });
   if (!session.businessId) return NextResponse.json({ error: "Esta cuenta no tiene un comercio asignado." }, { status: 403 });
-  const limit = await consumeRequestLimit("redeem-user", String(session.id), 30, 60);
+  const limit = await consumeRequestLimit("redeem-user", String(session.id), 120, 60);
   if (!limit.allowed) return NextResponse.json({ error: "Demasiadas operaciones. Espera antes de volver a intentarlo." }, { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds), "Cache-Control": "no-store" } });
   const idempotencyKey = request.headers.get("idempotency-key");
   if (!validIdempotencyKey(idempotencyKey)) return NextResponse.json({ error: "Falta un identificador válido para la compra. Actualiza la página." }, { status: 400 });
@@ -69,7 +69,20 @@ export async function POST(request: Request, { params }: Context) {
     return responseFor(code, session.businessId);
   } catch (error) {
     if (error instanceof Error && error.message === "Este bono pertenece a otro comercio.") return NextResponse.json({ error: "Bono no encontrado." }, { status: 404 });
-    const message = error instanceof Error && error.name !== "PostgresError" ? error.message : "No se pudo registrar el canje.";
-    return NextResponse.json({ error: message }, { status: 400, headers: { "Cache-Control": "no-store" } });
+    const knownRejection = new Set([
+      "Introduce un importe mayor que cero.",
+      "Este comercio no está activo.",
+      "Este bono aún no está vigente.",
+      "Este bono ha caducado.",
+      "Este bono ya no tiene saldo.",
+      "El importe supera el saldo disponible.",
+      "La operación ya se utilizó con otros datos.",
+    ]);
+    const knownMessage = error instanceof Error && knownRejection.has(error.message) ? error.message : null;
+    const status = knownMessage ? 400 : 503;
+    return NextResponse.json(
+      { error: knownMessage ?? "No se pudo confirmar la operación. Puedes reintentarla con seguridad." },
+      { status, headers: { "Cache-Control": "no-store" } },
+    );
   }
 }

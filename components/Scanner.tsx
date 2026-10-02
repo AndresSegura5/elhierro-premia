@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Camera, CameraOff, CheckCircle2, Keyboard, ScanLine, Wallet } from "lucide-react";
-import { formatDate, formatDateTime, formatEuros } from "@/lib/bonos";
+import { formatDate, formatDateTime, formatEuros, parseEuros } from "@/lib/bonos";
 import type { Coupon, Redemption } from "@/lib/types";
 import { normalizeCouponCode } from "@/lib/coupon-code";
+import { getPendingRedemptions, removePendingRedemption, savePendingRedemption, type PendingRedemption } from "@/lib/redemption-outbox";
 
 type Lookup = {
   coupon: Coupon;
@@ -32,6 +33,9 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
   const lastScan = useRef("");
   const purchaseAttempt = useRef<{ code: string; amount: string; key: string } | null>(null);
   const submitting = useRef(false);
+  const syncingOutbox = useRef(false);
+  const outboxRetry = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const retryDelay = useRef(2_000);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [manualCode, setManualCode] = useState("");
   const [amount, setAmount] = useState("");
@@ -39,6 +43,8 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  const [pendingRedemptions, setPendingRedemptions] = useState<PendingRedemption[]>([]);
+  const [isOnline, setIsOnline] = useState(true);
 
   const lookup = useCallback(async (value: string) => {
     const code = normalizeCouponCode(value);
@@ -57,6 +63,87 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
       setError(caught instanceof Error ? caught.message : "No se pudo consultar el bono.");
     }
   }, []);
+
+  const syncOutbox = useCallback(async () => {
+    if (!navigator.onLine || syncingOutbox.current) return;
+    if (outboxRetry.current) clearTimeout(outboxRetry.current);
+    outboxRetry.current = null;
+    syncingOutbox.current = true;
+    try {
+      const pending = await getPendingRedemptions(businessId);
+      setPendingRedemptions(pending);
+      for (const entry of pending) {
+        let response: Response;
+        try {
+          response = await fetch(`/api/bonos/${encodeURIComponent(entry.code)}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "Idempotency-Key": entry.key },
+            body: JSON.stringify({ amount: entry.amount }),
+          });
+        } catch {
+          const delay = retryDelay.current;
+          retryDelay.current = Math.min(retryDelay.current * 2, 60_000);
+          outboxRetry.current = setTimeout(() => { void syncOutbox(); }, delay);
+          break;
+        }
+        if (response.ok) {
+          retryDelay.current = 2_000;
+          const data = await response.json() as Lookup;
+          await removePendingRedemption(entry.key);
+          setPendingRedemptions((current) => current.filter((item) => item.key !== entry.key));
+          setResult((current) => current?.coupon.code === entry.code ? data : current);
+          setNotice("Compras pendientes sincronizadas con el servidor.");
+          continue;
+        }
+        if (response.status === 400 || response.status === 404) {
+          const data = await response.json().catch(() => ({})) as { error?: string };
+          await removePendingRedemption(entry.key);
+          setPendingRedemptions((current) => current.filter((item) => item.key !== entry.key));
+          setError(`Una compra pendiente de ${entry.amount} € no se registró: ${data.error ?? "el servidor la rechazó"}`);
+          continue;
+        }
+        if (response.status === 401 || response.status === 403) {
+          setError("La sesión del comercio no está activa. La compra pendiente sigue guardada; inicia sesión de nuevo para sincronizarla.");
+          break;
+        }
+        // Keep the same operation key after auth, rate-limit, or server errors;
+        // replay is safe because the server applies the key and debit atomically.
+        if (response.status === 429 || response.status >= 500) {
+          const serverDelay = Number(response.headers.get("retry-after"));
+          const delay = response.status === 429 && Number.isFinite(serverDelay) && serverDelay > 0 ? Math.min(serverDelay * 1_000, 300_000) : retryDelay.current;
+          retryDelay.current = Math.min(retryDelay.current * 2, 60_000);
+          outboxRetry.current = setTimeout(() => { void syncOutbox(); }, delay);
+        }
+        break;
+      }
+      const remaining = await getPendingRedemptions(businessId);
+      setPendingRedemptions(remaining);
+      if (remaining.length === 0) router.refresh();
+    } catch {
+      // Keep the local outbox intact; a later online event can retry it.
+    } finally {
+      syncingOutbox.current = false;
+    }
+  }, [businessId, router]);
+
+  useEffect(() => {
+    void getPendingRedemptions(businessId).then(setPendingRedemptions).catch(() => undefined);
+    setIsOnline(navigator.onLine);
+    const handleOnline = () => { setIsOnline(true); void syncOutbox(); };
+    const handleOffline = () => {
+      setIsOnline(false);
+      if (outboxRetry.current) clearTimeout(outboxRetry.current);
+      outboxRetry.current = null;
+    };
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    if (navigator.onLine) void syncOutbox();
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+      if (outboxRetry.current) clearTimeout(outboxRetry.current);
+    };
+  }, [businessId, syncOutbox]);
 
   async function startCamera() {
     setError("");
@@ -138,14 +225,58 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
     setBusy(true);
     setError("");
     setNotice("");
+    const attempt = purchaseAttempt.current;
+    const amountCents = parseEuros(attempt!.amount);
+    const entry: PendingRedemption | null = amountCents === null ? null : { ...attempt!, businessId, amountCents, createdAt: Date.now() };
+    const showQueued = () => {
+      if (!entry) return;
+      setPendingRedemptions((current) => [...current.filter((item) => item.key !== entry.key), entry].sort((a, b) => a.createdAt - b.createdAt));
+      purchaseAttempt.current = null;
+      setAmount("");
+      setNotice("Compra guardada en este móvil; se enviará al recuperar la conexión y abrir de nuevo el área del comercio.");
+    };
     try {
-      const response = await fetch(`/api/bonos/${encodeURIComponent(result.coupon.code)}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Idempotency-Key": purchaseAttempt.current.key },
-        body: JSON.stringify({ amount }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "No se pudo registrar el gasto.");
+      if (!entry) throw new Error("Indica un importe válido, con hasta dos decimales.");
+      // Persist the operation before sending it. If the connection drops after
+      // the server commits but before its reply arrives, replay uses this same key.
+      await savePendingRedemption(entry);
+      setPendingRedemptions((current) => [...current.filter((item) => item.key !== entry.key), entry].sort((a, b) => a.createdAt - b.createdAt));
+      if (!navigator.onLine) {
+        showQueued();
+        return;
+      }
+      let response: Response;
+      try {
+        response = await fetch(`/api/bonos/${encodeURIComponent(result.coupon.code)}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Idempotency-Key": attempt!.key },
+          body: JSON.stringify({ amount: attempt!.amount }),
+        });
+      } catch {
+        showQueued();
+        if (navigator.onLine) {
+          outboxRetry.current = setTimeout(() => { void syncOutbox(); }, retryDelay.current);
+          retryDelay.current = Math.min(retryDelay.current * 2, 60_000);
+        }
+        return;
+      }
+      if (response.status === 429 || response.status >= 500) {
+        showQueued();
+        const serverDelay = Number(response.headers.get("retry-after"));
+        const delay = response.status === 429 && Number.isFinite(serverDelay) && serverDelay > 0 ? Math.min(serverDelay * 1_000, 300_000) : retryDelay.current;
+        outboxRetry.current = setTimeout(() => { void syncOutbox(); }, delay);
+        return;
+      }
+      if (!response.ok) {
+        const details = await response.json().catch(() => ({})) as { error?: string };
+        await removePendingRedemption(entry.key);
+        setPendingRedemptions((current) => current.filter((item) => item.key !== entry.key));
+        purchaseAttempt.current = null;
+        throw new Error(details.error ?? "No se pudo registrar el gasto.");
+      }
+      const data = await response.json() as Lookup;
+      await removePendingRedemption(entry.key);
+      setPendingRedemptions((current) => current.filter((item) => item.key !== entry.key));
       setResult(data as Lookup);
       purchaseAttempt.current = null;
       setAmount("");
@@ -153,13 +284,19 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "No se pudo registrar el gasto.");
+      if (caught instanceof TypeError && entry && navigator.onLine) {
+        outboxRetry.current = setTimeout(() => { void syncOutbox(); }, retryDelay.current);
+        retryDelay.current = Math.min(retryDelay.current * 2, 60_000);
+      }
     } finally {
       submitting.current = false;
       setBusy(false);
     }
   }
 
-  const balance = result ? result.coupon.amountCents - result.coupon.usedCents : 0;
+  const serverBalance = result ? result.coupon.amountCents - result.coupon.usedCents : 0;
+  const pendingForCoupon = result ? pendingRedemptions.filter((entry) => entry.code === result.coupon.code).reduce((sum, entry) => sum + entry.amountCents, 0) : 0;
+  const balance = Math.max(0, serverBalance - pendingForCoupon);
   const canRedeem = result?.coupon.status === "available" || result?.coupon.status === "partial";
 
   return (
@@ -191,6 +328,11 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
         </form>
         {error && <p className="alert" role="alert">{error}</p>}
         {notice && <p className="scanner-success" role="status">{notice}</p>}
+        {pendingRedemptions.length > 0 && <div className="scanner-pending" role="status" aria-live="polite">
+          <strong>{pendingRedemptions.length} {pendingRedemptions.length === 1 ? "compra pendiente" : "compras pendientes"}</strong>
+          <span>Guardadas en este móvil; se enviarán al recuperar la conexión. Mantén abierta la sesión del comercio hasta que se sincronicen.</span>
+          {isOnline && <button type="button" onClick={() => void syncOutbox()}>Reintentar envío</button>}
+        </div>}
         {result && <div className="scanner-coupon" role="status" aria-live="polite">
           <div className="scanner-coupon-head"><CheckCircle2 size={20} aria-hidden="true" /><strong className="mono">{result.coupon.code}</strong><span className={`status-dot ${result.coupon.status}`}>{statusLabels[result.coupon.status]}</span></div>
           <dl>
@@ -199,7 +341,7 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
             <div><dt>Válido hasta</dt><dd>{formatDate(result.coupon.expiresAt)}</dd></div>
             <div><dt>Gastado</dt><dd>{formatEuros(result.coupon.usedCents)}</dd></div>
           </dl>
-          <p className="scanner-balance"><Wallet size={20} aria-hidden="true" /> Saldo: <strong>{formatEuros(balance)}</strong></p>
+          <p className="scanner-balance"><Wallet size={20} aria-hidden="true" /> Saldo disponible: <strong>{formatEuros(balance)}</strong>{pendingForCoupon > 0 && <small> (incluye {formatEuros(pendingForCoupon)} pendiente de sincronizar)</small>}</p>
           {result.redemptions.length > 0 && <ul className="scanner-movements">{result.redemptions.map((entry) => <li key={entry.id}><span>{formatDateTime(entry.createdAt)}</span><strong>{formatEuros(entry.amountCents)}</strong></li>)}</ul>}
           {canRedeem && result.coupon.businessId === businessId && <form className="scanner-spend" onSubmit={registerExpense}>
             <label htmlFor="expense-amount">Importe de esta compra</label>

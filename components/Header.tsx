@@ -30,8 +30,8 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
       <header className={`site-header${overlay ? " site-header--overlay" : ""}${menuOpen ? " site-header--menu-open" : ""}`}>
         <Link href="/" className="brand">
           <img className="brand-logo" src="/branding/site-logo.svg" alt="El Hierro premia deportistas" />
-          <span className="brand-affiliations" aria-label="Cabildo de El Hierro">
-            <span>CABILDO DE<br />EL HIERRO</span>
+          <span className="brand-affiliations" aria-label="Ganamos todos. Deporte y comercio.">
+            <span>Ganamos <em>todos</em><br />Deporte y comercio</span>
           </span>
         </Link>
         <button
@@ -48,22 +48,25 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
           <Link href="/comercios" onClick={() => setMenuOpen(false)} aria-current={pathname === "/comercios" ? "page" : undefined}>Comercios</Link>
           <Link href="/bono" onClick={() => setMenuOpen(false)} aria-current={pathname === "/bono" ? "page" : undefined}>El bono</Link>
           {merchantName ? (
-            <details className="nav-merchant-menu" ref={merchantMenuRef}>
-              <summary aria-label={`Menú de ${merchantName}`}>
-                <Store size={16} />
-                <span>{merchantName}</span>
-                <ChevronDown size={15} aria-hidden="true" />
-              </summary>
-              <div className="nav-merchant-popover">
-                <strong>{merchantName}</strong>
-                <div className="nav-merchant-details" aria-label="Datos del comercio">
-                  <span><Clock3 size={15} aria-hidden="true" />{merchantHours || "Horario no disponible"}</span>
-                  <span><MapPin size={15} aria-hidden="true" />{merchantAddress || "Dirección no disponible"}</span>
-                  <span><Phone size={15} aria-hidden="true" />{merchantPhone ? localPhoneNumber(merchantPhone) : "Teléfono no disponible"}</span>
+            <>
+              <details className="nav-merchant-menu" ref={merchantMenuRef}>
+                <summary aria-label={`Menú de ${merchantName}`}>
+                  <Store size={16} />
+                  <span>{merchantName}</span>
+                  <ChevronDown size={15} aria-hidden="true" />
+                </summary>
+                <div className="nav-merchant-popover">
+                  <strong>{merchantName}</strong>
+                  <div className="nav-merchant-details" aria-label="Datos del comercio">
+                    <span><Clock3 size={15} aria-hidden="true" />{merchantHours || "Horario no disponible"}</span>
+                    <span><MapPin size={15} aria-hidden="true" />{merchantAddress || "Dirección no disponible"}</span>
+                    <span><Phone size={15} aria-hidden="true" />{merchantPhone ? localPhoneNumber(merchantPhone) : "Teléfono no disponible"}</span>
+                  </div>
+                  {username && <form action={logout}><button type="submit">Cerrar sesión</button></form>}
                 </div>
-                {username && <form action={logout}><button type="submit">Cerrar sesión</button></form>}
-              </div>
-            </details>
+              </details>
+              {username && <form action={logout} className="nav-mobile-logout"><button type="submit">Cerrar sesión</button></form>}
+            </>
           ) : (
             <Link
               className="nav-business"
@@ -77,13 +80,16 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
             </Link>
           )}
           {username && isAdmin ? (
-            <details className="nav-account-menu" ref={accountMenuRef}>
-              <summary className="nav-admin nav-icon" title="Cuenta" aria-label="Abrir opciones de cuenta"><UserRound size={19} aria-hidden="true" /><span className="nav-mobile-label">Mi cuenta</span></summary>
-              <div className="nav-account-popover nav-merchant-popover">
-                <strong>{username}</strong>
-                <form action={logout}><button type="submit">Cerrar sesión</button></form>
-              </div>
-            </details>
+            <>
+              <details className="nav-account-menu" ref={accountMenuRef}>
+                <summary className="nav-admin nav-icon" title="Cuenta" aria-label="Abrir opciones de cuenta"><UserRound size={19} aria-hidden="true" /><span className="nav-mobile-label">Mi cuenta</span></summary>
+                <div className="nav-account-popover nav-merchant-popover">
+                  <strong>{username}</strong>
+                  <form action={logout}><button type="submit">Cerrar sesión</button></form>
+                </div>
+              </details>
+              <form action={logout} className="nav-mobile-logout"><button type="submit">Cerrar sesión</button></form>
+            </>
           ) : (
             <Link href="/admin" onClick={() => setMenuOpen(false)} className="nav-admin nav-icon" title="Administración" aria-label="Administración" aria-current={pathname.startsWith("/admin") ? "page" : undefined}>
               <UserRound size={19} aria-hidden="true" />

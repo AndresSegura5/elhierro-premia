@@ -35,3 +35,19 @@ test("redemptions enforce ownership, validity, balance and duplicate-operation s
   assert.throws(() => store.redeemCoupon("EH-BES-A1B234C", business, 1, now, randomUUID()), /no tiene saldo/);
   assert.equal(db.prepare("SELECT used_cents FROM coupons").get().used_cents, 3000);
 });
+
+test("simultaneous redemption attempts cannot spend more than the coupon balance", async () => {
+  const db = store.getDatabase();
+  db.exec("DELETE FROM redemptions; DELETE FROM coupons;");
+  const business = db.prepare("SELECT id FROM businesses LIMIT 1").get().id;
+  const code = "EH-BES-ABCDEFGHJKMN";
+  db.prepare("INSERT INTO coupons(code,race_id,business_id,amount_cents) VALUES(?,?,?,3000)").run(code, "bestial", business);
+  const now = new Date("2026-10-02T12:00:00Z");
+  const attempts = await Promise.allSettled(Array.from({ length: 15 }, () =>
+    Promise.resolve().then(() => store.redeemCoupon(code, business, 250, now, randomUUID())),
+  ));
+
+  assert.equal(attempts.filter((attempt) => attempt.status === "fulfilled").length, 12);
+  assert.equal(db.prepare("SELECT used_cents FROM coupons WHERE code=?").get(code).used_cents, 3000);
+  assert.equal(db.prepare("SELECT count(*) AS total FROM redemptions WHERE code=?").get(code).total, 12);
+});

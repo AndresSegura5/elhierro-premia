@@ -2443,6 +2443,9 @@ td a {
 .scanner-spend input { min-width: 0; padding: 0 12px; border: 1px solid var(--line); border-radius: 5px; font-size: 15px; }
 .scanner-spend small { color: var(--muted); font-size: 11px; }
 .scanner-success { margin-top: 16px !important; padding: 12px 14px; background: #eaf7f3; color: #124c40 !important; }
+.scanner-pending { display: grid; gap: 8px; margin-top: 14px; padding: 13px 15px; border: 1px solid #e6c777; border-radius: 7px; background: #fff8e5; color: #5a4610; line-height: 1.45; }
+.scanner-pending button { justify-self: start; min-height: 38px; padding: 7px 12px; border: 1px solid #9a7418; border-radius: 5px; background: #fff; color: #5a4610; font: inherit; font-weight: 600; }
+.scanner-balance small { color: var(--muted); font-size: 12px; }
 @media (max-width: 550px) {
   .scanner-coupon dl, .scanner-spend > div { grid-template-columns: 1fr; }
   .scanner-spend input { min-height: 48px; }
@@ -4365,6 +4368,8 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
 .nav-merchant-menu > summary:focus-visible,
 .nav-account-menu > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .nav-mobile-label { display: none; }
+.nav-mobile-logout { display: none; }
+.brand-affiliations em { color: var(--accent-dark); font-style: normal; font-weight: 700; }
 
 @media (max-width: 760px) {
   .site-header { min-height: 74px; border-bottom: 1px solid #edf0f2; box-shadow: none; }
@@ -4557,6 +4562,43 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
   .race-rail-meta { grid-template-columns: 38px minmax(0, 1fr) 28px; gap: 10px; padding: 14px; }
   .race-rail-meta img { width: 38px; height: 38px; }
   .race-rail-copy strong { font-size: 14px; }
+}
+
+@media (max-width: 760px) {
+  html,
+  body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+  .brand-affiliations {
+    max-width: calc(100vw - 118px);
+    white-space: normal;
+    line-height: 1.1;
+  }
+  .site-header--menu-open .main-nav.main-nav--open {
+    max-height: calc(100dvh - 100px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-bottom: max(32px, env(safe-area-inset-bottom));
+  }
+  .site-header--menu-open .nav-mobile-logout {
+    display: block;
+    width: 100%;
+    margin: 8px 0 0;
+    padding: 12px 0 0;
+    border-top: 1px solid var(--line);
+    text-align: center;
+  }
+  .site-header--menu-open .nav-mobile-logout button {
+    min-height: 52px;
+    padding: 8px 16px;
+    border: 0;
+    background: transparent;
+    color: var(--accent-dark);
+    font: 500 19px/1.35 var(--font-sans);
+  }
 }
 
 @media (hover: none) and (max-width: 1050px) {
