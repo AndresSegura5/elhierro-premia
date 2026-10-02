@@ -15,8 +15,8 @@
   --accent-ink: #3a1c00;
   --button-height: 44px;
   --shadow: none;
-  --background-motifs: url("/branding/background-motifs.svg");
-  --background-motifs-light: url("/branding/background-motifs-light.svg");
+  --background-motifs: none;
+  --background-motifs-light: none;
   --map-water: #071626;
 }
 @media (max-width: 760px) {
@@ -2767,6 +2767,49 @@ td a {
 .scanner-pending { display: grid; gap: 8px; margin-top: 14px; padding: 13px 15px; border: 1px solid #e6c777; border-radius: 7px; background: #fff8e5; color: #5a4610; line-height: 1.45; }
 .scanner-pending button { justify-self: start; min-height: 38px; padding: 7px 12px; border: 1px solid #9a7418; border-radius: 5px; background: #fff; color: #5a4610; font: inherit; font-weight: 600; }
 .scanner-balance small { color: var(--muted); font-size: 12px; }
+.scanner-modal-backdrop {
+  position: fixed;
+  z-index: 90;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(7 22 38 / 62%);
+}
+.scanner-modal {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  width: min(440px, 100%);
+  gap: 14px;
+  padding: 32px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 22px 70px rgb(7 22 38 / 24%);
+  color: var(--ink);
+  text-align: center;
+}
+.scanner-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+}
+.scanner-modal-close:hover { border-color: var(--accent); color: var(--accent-dark); }
+.scanner-modal-icon { color: var(--accent-dark); }
+.scanner-modal h2 { margin: 0; font-size: 28px; }
+.scanner-modal p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.scanner-modal .button { min-width: 140px; justify-content: center; margin-top: 4px; }
 @media (max-width: 550px) {
   .scanner-coupon dl, .scanner-spend > div { grid-template-columns: 1fr; }
   .scanner-spend input { min-height: 48px; }
@@ -2920,6 +2963,13 @@ td a {
 }
 
 @media (max-width: 760px) {
+  .merchant-main,
+  .merchant-hero { max-width: 100%; overflow-x: hidden; }
+  .merchant-hero,
+  .merchant-content,
+  .scanner,
+  .scanner-view,
+  .scanner-side { min-width: 0; max-width: 100%; }
   .business-managed-tools { flex-wrap: wrap; justify-content: flex-end; }
   .merchant-ledger-heading { flex-wrap: wrap; }
   .merchant-export-actions { width: 100%; }
@@ -3052,14 +3102,28 @@ td a {
     border-bottom: 1px solid var(--line);
   }
   .site-header--menu-open .nav-merchant-menu > summary {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
     max-width: none;
+    width: 100%;
     min-height: 60px;
-    padding-inline: 0;
+    padding: 0;
     border: 0;
+    border-bottom: 1px solid var(--line);
     border-radius: 0;
     background: transparent;
     font-size: 19px;
   }
+  .site-header--menu-open .nav-merchant-menu > summary > svg:first-child { display: none; }
+  .site-header--menu-open .nav-merchant-menu > summary > svg:last-child {
+    width: 20px;
+    height: 20px;
+    margin-left: auto;
+    transition: transform .18s ease;
+  }
+  .site-header--menu-open .nav-merchant-menu[open] > summary > svg:last-child { transform: rotate(180deg); }
   .site-header--menu-open .nav-merchant-menu > summary:hover,
   .site-header--menu-open .nav-merchant-menu[open] > summary {
     background: transparent;
@@ -3068,12 +3132,13 @@ td a {
   .site-header--menu-open .nav-merchant-popover {
     position: static;
     width: 100%;
-    padding: 0 0 16px 24px;
+    padding: 12px 0 16px 24px;
     border: 0;
     border-radius: 0;
     background: transparent;
     box-shadow: none;
   }
+  .site-header--menu-open .nav-merchant-popover strong { font-size: 16px; }
   .site-header--menu-open .mobile-menu-toggle {
     border-color: var(--ink);
     background: var(--ink);
@@ -3357,7 +3422,7 @@ td a {
     padding: 0 20px 118px;
   }
   .merchant-hero-inner {
-    width: calc(100% - (2 * var(--page-gutter)) + 40px);
+    width: 100%;
   }
   .page-title-hero--embedded {
     width: calc(100% + 40px);
@@ -3387,6 +3452,17 @@ td a {
   .scanner-side h2 {
     font-size: 32px;
   }
+  .merchant-hero .page-title-hero h1 {
+    gap: 6px;
+    font-size: clamp(22px, 7vw, 30px);
+  }
+  .merchant-hero .page-title-hero-text {
+    max-width: calc(100% - 12px);
+    overflow-wrap: normal;
+    white-space: normal;
+  }
+  .scanner-view { height: clamp(300px, 100vw, 360px); }
+  .scanner-side { padding: 20px; }
   .scanner-empty strong {
     font-size: 22px;
   }
@@ -3463,6 +3539,13 @@ td a {
 .island-marker span.directory-dot.selected {
   background: #071626;
   outline: 2px solid var(--accent);
+}
+.island-marker span.directory-dot.highlighted {
+  width: 24px;
+  height: 24px;
+  transform: translate(-4px, -4px);
+  background: #1976d2;
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, .22), 0 3px 10px rgba(5, 37, 57, .42);
 }
 .island-marker span.selected {
   background: #071626;
@@ -4204,23 +4287,53 @@ td a {
   width: calc(100% - (2 * var(--page-gutter)));
   max-width: none;
   margin: 0 auto;
-  padding: 48px 0 0;
+  padding: 88px 0 0;
   background: transparent;
+}
+.bono-lookup-section > h2 {
+  margin: 0 0 28px;
+  color: var(--ink);
+  font-size: 42px;
+  font-weight: 400;
 }
 .bono-lookup-inline {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 36px;
   width: 100%;
-  min-height: 0;
-  margin: 0;
-  padding: 0;
-  overflow: visible;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
+  max-width: none;
+  min-height: 270px;
+  margin: 0 auto;
+  padding: 32px 56px;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #071727;
+  background-image: var(--background-motifs-light);
+  background-position: 50% 50%;
+  background-repeat: repeat;
+  background-size: 1500px 850px;
+  box-shadow: 0 18px 38px -28px rgba(6, 22, 36, .42);
+}
+.bono-lookup-inline::before {
+  position: absolute;
+  inset: 12px;
+  border: 1px solid rgba(255, 122, 26, .18);
+  border-radius: 6px;
+  content: "";
+  pointer-events: none;
+}
+.bono-lookup-inline > * {
+  position: relative;
+  z-index: 1;
 }
 .bono-lookup-deco {
-  display: none;
+  flex: 0 0 auto;
+  display: block;
+  color: var(--accent);
+  opacity: .8;
+  filter: drop-shadow(0 0 8px rgba(255, 122, 26, .22));
 }
 .bono-lookup-deco--phone {
   transform: rotate(-10deg);
@@ -4229,16 +4342,17 @@ td a {
   transform: rotate(8deg);
 }
 .bono-lookup-inline form {
+  flex: 1 1 auto;
   min-width: 0;
   width: 100%;
-  max-width: 760px;
+  max-width: 840px;
   text-align: left;
 }
 .bono-lookup-inline h2 {
   margin: 0 0 28px;
   font-size: 42px;
   font-weight: 400;
-  color: var(--ink);
+  color: #fff;
 }
 .bono-lookup-inline form > div {
   display: flex;
@@ -4326,7 +4440,7 @@ td a {
 }
 .bono-race-card {
   position: relative;
-  min-height: 202px;
+  min-height: 176px;
   overflow: hidden;
   border: 1px solid #d5e3f0;
   border-radius: 12px;
@@ -4343,20 +4457,20 @@ td a {
 .bono-race-card-body {
   position: relative;
   z-index: 1;
-  padding: 17px 18px;
+  padding: 15px 18px;
 }
 .bono-race-card-body strong {
   display: block;
   margin-bottom: 8px;
-  font-size: 18px;
+  font-size: 20px !important;
   line-height: 1.2;
   color: var(--ink);
 }
 .bono-race-card-body p {
   margin: 0;
-  max-width: 52%;
+  max-width: 62%;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 16px !important;
   line-height: 1.4;
 }
 .bono-race-card-meta {
@@ -4382,9 +4496,9 @@ td a {
 .bono-race-logo {
   position: absolute;
   right: 18px;
-  bottom: 16px;
-  width: 96px;
-  height: 96px;
+  bottom: 14px;
+  width: 108px;
+  height: 108px;
   object-fit: contain;
   pointer-events: none;
 }
@@ -4516,9 +4630,13 @@ td a {
     margin: 0 auto;
     padding: 40px 0 0;
   }
+  .bono-lookup-section > h2 {
+    margin-bottom: 24px;
+    font-size: 34px;
+  }
   .bono-lookup-inline {
-    min-height: 0;
-    padding: 0;
+    min-height: 260px;
+    padding: 28px 22px;
   }
   .bono-lookup-deco {
     display: none;
@@ -4526,6 +4644,7 @@ td a {
   .bono-lookup-inline h2 {
     font-size: 34px;
     margin-bottom: 22px;
+    color: #fff;
   }
   .bono-lookup-field {
     height: 56px;
@@ -4553,19 +4672,20 @@ td a {
     gap: 14px;
   }
   .bono-race-card {
-    min-height: 190px;
+    min-height: 176px;
   }
   .bono-race-card-body {
-    padding: 18px;
+    padding: 15px 16px;
   }
+  .bono-race-card-body p { max-width: 62%; }
   .bono-race-card-body strong {
-    font-size: 18px;
+    font-size: 20px !important;
   }
   .bono-race-logo {
     right: 12px;
-    bottom: 18px;
-    width: 96px;
-    height: 96px;
+    bottom: 12px;
+    width: 100px;
+    height: 100px;
   }
   .bono-faq {
     padding: 40px var(--page-gutter) 72px;
@@ -4919,6 +5039,58 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
     background: transparent;
     color: var(--accent-dark);
     font: 500 19px/1.35 var(--font-sans);
+  }
+}
+
+@media (max-width: 760px) {
+  .commerce-categories {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    margin-top: 18px;
+  }
+  .commerce-categories > button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 1px solid #d6e0e7;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, .92);
+    color: #071626;
+    font: 600 13px/1.2 var(--font-sans);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: border-color .18s ease, background-color .18s ease, color .18s ease, box-shadow .18s ease, transform .18s ease;
+  }
+  .commerce-categories > button:hover,
+  .commerce-categories > button:focus-visible {
+    border-color: var(--accent);
+    background: #fff;
+    box-shadow: 0 4px 12px rgba(7, 22, 38, .1);
+  }
+  .commerce-categories > button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .commerce-categories > button:active {
+    transform: translateY(1px);
+  }
+  .commerce-categories > button.active {
+    border-color: #071626;
+    background: #071626;
+    color: #fff;
+    box-shadow: 0 5px 12px rgba(7, 22, 38, .18);
+  }
+  .commerce-categories > button svg {
+    flex: 0 0 auto;
+    width: 17px;
+    height: 17px;
   }
 }
 

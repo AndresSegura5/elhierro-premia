@@ -29,7 +29,6 @@ export function BonoLookupInline() {
           openCoupon(code);
         }}
       >
-        <h2>Buscador de bono</h2>
         <label className="bono-lookup-instruction" htmlFor={inputId}>Introduce tu código o escanea el QR</label>
         <div>
           <div className="bono-lookup-field">

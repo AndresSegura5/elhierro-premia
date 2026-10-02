@@ -44,6 +44,7 @@ export default async function BonoPage() {
           </ol>
         </section>
         <section className="bono-lookup-section" aria-label="Consultar un bono">
+          <h2>Buscador de bono</h2>
           <BonoLookupInline />
         </section>
 

@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Camera, CameraOff, CheckCircle2, Keyboard, ScanLine, Wallet } from "lucide-react";
+import { AlertTriangle, Camera, CameraOff, CheckCircle2, Keyboard, ScanLine, Wallet, X } from "lucide-react";
+import jsQR from "jsqr";
 import { formatDate, formatDateTime, formatEuros, parseEuros } from "@/lib/bonos";
 import type { Coupon, Redemption } from "@/lib/types";
 import { normalizeCouponCode } from "@/lib/coupon-code";
@@ -14,9 +15,6 @@ type Lookup = {
   businessName: string;
   redemptions: Redemption[];
 };
-
-type BarcodeDetectorShape = { detect(source: CanvasImageSource): Promise<Array<{ rawValue?: string }>> };
-type BarcodeDetectorConstructor = new (options: { formats: string[] }) => BarcodeDetectorShape;
 
 const statusLabels = {
   "not-started": "Aún no vigente",
@@ -45,24 +43,31 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
   const [busy, setBusy] = useState(false);
   const [pendingRedemptions, setPendingRedemptions] = useState<PendingRedemption[]>([]);
   const [isOnline, setIsOnline] = useState(true);
+  const [wrongBusiness, setWrongBusiness] = useState<{ code: string; businessName: string } | null>(null);
 
   const lookup = useCallback(async (value: string) => {
     const code = normalizeCouponCode(value);
     setResult(null);
     setError("");
     setNotice("");
+    setWrongBusiness(null);
     if (!code) return;
     try {
       const response = await fetch(`/api/bonos/${encodeURIComponent(code)}`, { cache: "no-store" });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "No se pudo consultar el bono.");
+      if (data.coupon?.businessId !== businessId) {
+        setManualCode(data.coupon?.code ?? code);
+        setWrongBusiness({ code: data.coupon?.code ?? code, businessName: data.businessName ?? "otro comercio" });
+        return;
+      }
       setResult(data as Lookup);
       setManualCode(code);
       setAmount("");
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "No se pudo consultar el bono.");
     }
-  }, []);
+  }, [businessId]);
 
   const syncOutbox = useCallback(async () => {
     if (!navigator.onLine || syncingOutbox.current) return;
@@ -175,25 +180,44 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
     const activeStream = stream;
     let cancelled = false;
     let frame = 0;
-    const BarcodeDetectorClass = (window as Window & { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
-    if (!BarcodeDetectorClass) {
-      setError("Este navegador no admite escaneo QR. Introduce el código manualmente.");
-      return;
-    }
-    const detector = new BarcodeDetectorClass({ formats: ["qr_code"] });
+    let lastRead = 0;
 
-    async function tick() {
+    function scanCanvas(context: CanvasRenderingContext2D, canvas: HTMLCanvasElement, video: HTMLVideoElement) {
+      const sourceWidth = video.videoWidth;
+      const sourceHeight = video.videoHeight;
+      const fullScale = Math.min(1, 1280 / sourceWidth);
+      const fullWidth = Math.max(1, Math.round(sourceWidth * fullScale));
+      const fullHeight = Math.max(1, Math.round(sourceHeight * fullScale));
+      canvas.width = fullWidth;
+      canvas.height = fullHeight;
+      context.drawImage(video, 0, 0, sourceWidth, sourceHeight, 0, 0, fullWidth, fullHeight);
+      const fullResult = jsQR(context.getImageData(0, 0, fullWidth, fullHeight).data, fullWidth, fullHeight, { inversionAttempts: "attemptBoth" });
+      if (fullResult) return fullResult.data;
+
+      // The guide is centered over the QR. This second pass preserves more
+      // pixels on phones where the complete camera frame is much wider.
+      const cropSize = Math.floor(Math.min(sourceWidth, sourceHeight) * 0.78);
+      const cropScale = Math.min(1.5, 1200 / cropSize);
+      const cropWidth = Math.max(1, Math.round(cropSize * cropScale));
+      const cropX = Math.floor((sourceWidth - cropSize) / 2);
+      const cropY = Math.floor((sourceHeight - cropSize) / 2);
+      canvas.width = cropWidth;
+      canvas.height = cropWidth;
+      context.drawImage(video, cropX, cropY, cropSize, cropSize, 0, 0, cropWidth, cropWidth);
+      const cropResult = jsQR(context.getImageData(0, 0, cropWidth, cropWidth).data, cropWidth, cropWidth, { inversionAttempts: "attemptBoth" });
+      return cropResult?.data ?? null;
+    }
+
+    function tick() {
       if (cancelled || !videoRef.current || !canvasRef.current) return;
       const video = videoRef.current;
       const canvas = canvasRef.current;
-      if (video.readyState >= 2) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const context = canvas.getContext("2d");
-        context?.drawImage(video, 0, 0, canvas.width, canvas.height);
+      if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0) {
         try {
-          const found = await detector.detect(canvas);
-          const raw = found[0]?.rawValue;
+          const context = canvas.getContext("2d", { willReadFrequently: true });
+          const now = performance.now();
+          const raw = context && now - lastRead >= 140 ? scanCanvas(context, canvas, video) : null;
+          if (raw) lastRead = now;
           if (raw && raw !== lastScan.current) {
             lastScan.current = raw;
             activeStream.getTracks().forEach((track) => track.stop());
@@ -350,6 +374,15 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
           </form>}
         </div>}
       </div>
+      {wrongBusiness && <div className="scanner-modal-backdrop" role="presentation">
+        <section className="scanner-modal" role="dialog" aria-modal="true" aria-labelledby="scanner-wrong-business-title">
+          <button type="button" className="scanner-modal-close" onClick={() => setWrongBusiness(null)} aria-label="Cerrar aviso"><X size={20} aria-hidden="true" /></button>
+          <AlertTriangle size={34} aria-hidden="true" className="scanner-modal-icon" />
+          <h2 id="scanner-wrong-business-title">Bono de otro comercio</h2>
+          <p>El bono <strong className="mono">{wrongBusiness.code}</strong> está asignado a <strong>{wrongBusiness.businessName}</strong>. Este comercio no puede consultar ni registrar compras con él.</p>
+          <button type="button" className="button" onClick={() => setWrongBusiness(null)}>Entendido</button>
+        </section>
+      </div>}
     </section>
   );
 }

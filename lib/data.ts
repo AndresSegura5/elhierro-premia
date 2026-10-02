@@ -147,8 +147,9 @@ export const siteContentDefaults = {
       { q: "¿En qué comercio puedo usar mi bono?", a: "Solo en el comercio que aparece en tu bono. Se asigna al emitir los bonos para repartir las visitas entre los negocios participantes, no según tu dorsal." },
       { q: "¿Qué pasa si no lo canjeo a tiempo?", a: "Cada carrera tiene una fecha de inicio y un plazo de vigencia propios. Consulta la fecha de vencimiento en tu bono." },
       { q: "¿Me pueden dar cambio o usarlo parcialmente?", a: "Puedes gastarlo en varias compras dentro del mismo comercio asignado, hasta agotar el saldo. No se entrega cambio en efectivo." },
+      { q: "¿Puedo gastar más dinero del que ofrece el bono?", a: "Sí. Si el importe de la compra supera el saldo disponible del bono, puedes utilizarlo y abonar la diferencia restante mediante el medio de pago aceptado por el comercio. El bono quedará agotado cuando se consuma todo su saldo." },
       { q: "¿Puedo consultar el estado de mi bono?", a: "Sí, introduce tu código en el buscador para consultar el saldo, los gastos y la fecha de vencimiento." },
-      { q: "He perdido mi código, ¿qué hago?", a: "Si tienes una foto del código QR o del código alfanumérico, es suficiente: en el comercio pueden validar el bono escaneando el QR o introduciendo el código. Si no conservas ninguno, comunícalo a la organización en el punto de información; no es posible localizar el bono usando el dorsal porque no se vinculan al emitirlo." },
+      { q: "He perdido mi bono, ¿qué hago?", a: "Si tienes una foto del código QR o del código alfanumérico, es suficiente: en el comercio pueden validar el bono escaneando el QR o introduciendo el código. Si no conservas ninguno, comunícalo a la organización en el punto de información; no es posible localizar el bono usando el dorsal porque no se vinculan al emitirlo." },
     ],
   },
 } as const;

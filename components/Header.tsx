@@ -65,7 +65,6 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
                   {username && <form action={logout}><button type="submit">Cerrar sesión</button></form>}
                 </div>
               </details>
-              {username && <form action={logout} className="nav-mobile-logout"><button type="submit">Cerrar sesión</button></form>}
             </>
           ) : (
             <Link

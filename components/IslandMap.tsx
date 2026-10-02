@@ -56,6 +56,7 @@ function cardPositionFor(point: { x: number; y: number }, size: { x: number; y: 
 export function IslandMap({
   businesses,
   activeId,
+  highlightedId,
   onSelect,
   markerStyle = "icon",
   visibleBusinessIds,
@@ -65,6 +66,7 @@ export function IslandMap({
 }: {
   businesses: Business[];
   activeId?: string;
+  highlightedId?: string;
   onSelect: (id: string | null) => void;
   markerStyle?: "icon" | "dot";
   visibleBusinessIds?: ReadonlySet<string>;
@@ -84,23 +86,27 @@ export function IslandMap({
   const [hoveredId, setHoveredId] = useState<string | undefined>();
   const displayedId = hoveredId ?? activeId;
   const activeIdRef = useRef(displayedId);
+  const highlightedIdRef = useRef(highlightedId);
   const [cardPosition, setCardPosition] = useState<ReturnType<typeof cardPositionFor> | null>(null);
   onSelectRef.current = onSelect;
   businessesRef.current = businesses;
   visibleBusinessIdsRef.current = visibleBusinessIds;
   activeIdRef.current = displayedId;
+  highlightedIdRef.current = highlightedId;
   const activeBusiness = displayedId
     ? businesses.find((business) => business.id === displayedId)
     : undefined;
 
   useEffect(() => {
     markers.current.forEach((marker, id) => {
-      marker.getElement()?.querySelector("span")?.classList.toggle("selected", id === displayedId);
+      const markerSpan = marker.getElement()?.querySelector("span");
+      markerSpan?.classList.toggle("selected", id === displayedId);
+      markerSpan?.classList.toggle("highlighted", id === highlightedId);
     });
     if (!activeBusiness || !map.current || !element.current) return;
     const point = map.current.latLngToContainerPoint([activeBusiness.lat, activeBusiness.lng]);
     setCardPosition(cardPositionFor(point, map.current.getSize()));
-  }, [displayedId, activeBusiness]);
+  }, [displayedId, highlightedId, activeBusiness]);
 
   useEffect(() => {
     let disposed = false;
@@ -229,7 +235,7 @@ export function IslandMap({
           const Icon = iconForBusiness(business.category);
           const icon = L.divIcon({
             className: "island-marker",
-            html: `<span class="${markerStyle === "dot" ? "directory-dot " : ""}${business.id === activeIdRef.current ? "selected" : ""}">${markerStyle === "icon" ? renderToStaticMarkup(<Icon size={19} strokeWidth={2.4} aria-hidden="true" />) : ""}</span>`,
+            html: `<span class="${markerStyle === "dot" ? "directory-dot " : ""}${business.id === activeIdRef.current ? "selected " : ""}${business.id === highlightedIdRef.current ? "highlighted" : ""}">${markerStyle === "icon" ? renderToStaticMarkup(<Icon size={19} strokeWidth={2.4} aria-hidden="true" />) : ""}</span>`,
             iconSize: markerStyle === "dot" ? [16, 16] : [38, 38],
             iconAnchor: markerStyle === "dot" ? [8, 8] : [19, 36],
           });

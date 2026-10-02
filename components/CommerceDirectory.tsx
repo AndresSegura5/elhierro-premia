@@ -21,6 +21,7 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
   const [category, setCategory] = useState("");
   const [municipality, setMunicipality] = useState<Municipality | "">("");
   const [selectedId, setSelectedId] = useState<string | null>();
+  const [highlightedId, setHighlightedId] = useState<string>();
   const [mapExpanded, setMapExpanded] = useState(false);
   const categories = useMemo(() => [...new Set(businesses.map((business) => business.category))], [businesses]);
 
@@ -104,7 +105,12 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
                     const selected = activeId === business.id;
                     const Icon = iconForBusiness(business.category);
                     return (
-                      <li className={selected ? "selected" : undefined} key={business.id}>
+                      <li
+                        className={selected ? "selected" : undefined}
+                        key={business.id}
+                        onMouseEnter={() => setHighlightedId(business.id)}
+                        onMouseLeave={() => setHighlightedId(undefined)}
+                      >
                         <button type="button" aria-expanded={selected} onClick={() => setSelectedId(selected ? null : business.id)}>
                           <BusinessPhoto
                             src={business.image}
@@ -137,6 +143,7 @@ export function CommerceDirectory({ businesses }: { businesses: Business[] }) {
             businesses={businesses}
             visibleBusinessIds={visibleBusinessIds}
             activeId={activeId}
+            highlightedId={highlightedId}
             onSelect={setSelectedId}
             markerStyle="dot"
             scrollWheelZoom={mapExpanded}
