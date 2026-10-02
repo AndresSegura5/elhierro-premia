@@ -46,7 +46,7 @@ export default async function Home() {
               <span className="race-rail-overlay" aria-hidden="true" />
               <span className="race-rail-meta">
                 <img src={race.logoPath} alt="" />
-                <span className="race-rail-copy"><strong>{race.shortName}</strong><small>{race.couponQuantity.toLocaleString("es-ES")} bonos previstos</small></span>
+                <span className="race-rail-copy"><strong>{race.shortName}</strong></span>
                 <ArrowUpRight size={16} />
               </span>
             </a>

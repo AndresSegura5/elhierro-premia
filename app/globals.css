@@ -786,23 +786,18 @@ body > main { margin-top: 0; margin-bottom: 0; }
   min-width: 0;
   align-self: center;
 }
-.race-rail-copy strong,
-.race-rail-copy small {
+.race-rail-copy strong {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
 }
 .race-rail-copy strong {
-  font-size: 15px;
+  font-size: 18px;
+  line-height: 1.15;
   font-weight: 700;
   color: #fff;
   text-shadow: 0 1px 6px rgba(0, 0, 0, .4);
-}
-.race-rail-copy small {
-  margin-top: 3px;
-  color: rgba(255, 255, 255, .78);
-  font-size: 11px;
 }
 .race-rail-meta > svg {
   grid-column: 3;
@@ -5198,8 +5193,7 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
     padding: 14px;
   }
   .race-rail-meta img { width: 36px; height: 36px; padding: 4px; }
-  .race-rail-copy strong { white-space: normal; line-height: 1.3; font-size: 14px; }
-  .race-rail-copy small { white-space: normal; font-size: 11px; line-height: 1.4; }
+  .race-rail-copy strong { font-size: 17px; }
   .race-rail-meta > svg { display: none; }
 }
 
@@ -5217,8 +5211,7 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
   }
   .race-rail-meta { grid-template-columns: 44px minmax(0, 1fr) 32px; gap: 12px; padding: 16px; }
   .race-rail-meta img { width: 44px; height: 44px; padding: 5px; }
-  .race-rail-copy strong { font-size: 16px; }
-  .race-rail-copy small { margin-top: 5px; color: rgba(255, 255, 255, .9); font-size: 12px; }
+  .race-rail-copy strong { font-size: 18px; }
   .race-rail-meta > svg { display: block; width: 32px; height: 32px; }
 }
 
@@ -5227,7 +5220,7 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
   .page-title-hero--home h2 { font-size: 26px; }
   .race-rail-meta { grid-template-columns: 38px minmax(0, 1fr) 28px; gap: 10px; padding: 14px; }
   .race-rail-meta img { width: 38px; height: 38px; }
-  .race-rail-copy strong { font-size: 14px; }
+  .race-rail-copy strong { font-size: 16px; }
 }
 
 @media (max-width: 760px) {
