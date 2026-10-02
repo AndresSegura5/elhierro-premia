@@ -4347,6 +4347,9 @@ td a {
     z-index: 4;
     padding-top: 34px;
   }
+  .commerce-copy .eyebrow {
+    margin-bottom: 28px;
+  }
   .commerce-copy h2 {
     font-size: 58px;
   }
@@ -4355,12 +4358,16 @@ td a {
   }
   .commerce-intro {
     max-width: 620px;
+    margin-top: 30px;
     font-size: 13px;
     line-height: 1.45;
   }
+  .commerce-search {
+    margin-top: 34px;
+  }
   .commerce-categories {
     max-width: 100%;
-    margin-top: 18px;
+    margin-top: 24px;
     gap: 10px;
   }
   .commerce-categories > button {
