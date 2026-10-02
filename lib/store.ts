@@ -257,20 +257,20 @@ export async function listRaceRedemptions(raceId: string): Promise<Redemption[]>
   return rows.map(mapRedemption);
 }
 
-export async function listLoginAudit(limit = 100): Promise<LoginAuditRecord[]> {
-  if (!hasPostgresDatabase()) return sqliteStore.listLoginAudit(limit);
+export async function listLoginAudit(): Promise<LoginAuditRecord[]> {
+  if (!hasPostgresDatabase()) return sqliteStore.listLoginAudit();
   const rows = await getPostgres()<Array<{ id: number; user_id: number; username: string; role: string; signed_in_at: string | Date; signed_out_at: string | Date | null }>>`
     SELECT id, user_id, username, role, signed_in_at, signed_out_at
-    FROM public.login_events ORDER BY signed_in_at DESC, id DESC LIMIT ${limit}
+    FROM public.login_events ORDER BY signed_in_at DESC, id DESC
   `;
   return rows.map((row) => ({ id: Number(row.id), userId: Number(row.user_id), username: row.username, role: row.role, signedInAt: row.signed_in_at instanceof Date ? row.signed_in_at.toISOString() : String(row.signed_in_at), signedOutAt: row.signed_out_at ? (row.signed_out_at instanceof Date ? row.signed_out_at.toISOString() : String(row.signed_out_at)) : null }));
 }
 
-export async function listAuditEvents(limit = 100): Promise<AuditEventRecord[]> {
-  if (!hasPostgresDatabase()) return sqliteStore.listAuditEvents(limit);
+export async function listAuditEvents(): Promise<AuditEventRecord[]> {
+  if (!hasPostgresDatabase()) return sqliteStore.listAuditEvents();
   const rows = await getPostgres()<Array<{ id: number; actor_username: string | null; action: string; entity_type: string; entity_id: string | null; details: string; created_at: string | Date }>>`
     SELECT id, actor_username, action, entity_type, entity_id, details, created_at
-    FROM public.audit_events ORDER BY created_at DESC, id DESC LIMIT ${limit}
+    FROM public.audit_events ORDER BY created_at DESC, id DESC
   `;
   return rows.map((row) => ({ id: Number(row.id), actorUsername: row.actor_username, action: row.action, entityType: row.entity_type, entityId: row.entity_id, details: row.details, createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at) }));
 }

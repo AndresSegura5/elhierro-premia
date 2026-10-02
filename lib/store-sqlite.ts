@@ -350,18 +350,18 @@ export function listRaceRedemptions(raceId: string) {
   return rows.map(mapRedemption);
 }
 
-export function listLoginAudit(limit = 100): LoginAuditRecord[] {
+export function listLoginAudit(): LoginAuditRecord[] {
   return getDatabase().prepare(`
     SELECT id, user_id, username, role, signed_in_at, signed_out_at
-    FROM login_events ORDER BY signed_in_at DESC, id DESC LIMIT ?
-  `).all(limit) as LoginAuditRecord[];
+    FROM login_events ORDER BY signed_in_at DESC, id DESC
+  `).all() as LoginAuditRecord[];
 }
 
-export function listAuditEvents(limit = 100): AuditEventRecord[] {
+export function listAuditEvents(): AuditEventRecord[] {
   const rows = getDatabase().prepare(`
     SELECT id, actor_username, action, entity_type, entity_id, details, created_at
-    FROM audit_events ORDER BY created_at DESC, id DESC LIMIT ?
-  `).all(limit) as Array<{ id: number; actor_username: string | null; action: string; entity_type: string; entity_id: string | null; details: string; created_at: string }>;
+    FROM audit_events ORDER BY created_at DESC, id DESC
+  `).all() as Array<{ id: number; actor_username: string | null; action: string; entity_type: string; entity_id: string | null; details: string; created_at: string }>;
   return rows.map((row) => ({ id: row.id, actorUsername: row.actor_username, action: row.action, entityType: row.entity_type, entityId: row.entity_id, details: row.details, createdAt: row.created_at }));
 }
 

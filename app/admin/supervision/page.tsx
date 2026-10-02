@@ -81,12 +81,12 @@ export default async function SupervisionPage() {
       </section>
 
       <section className="admin-supervision-panel">
-        <div className="admin-supervision-heading"><div><p className="eyebrow">Trazabilidad</p><h2><KeyRound size={20} aria-hidden="true" />Accesos</h2></div><small>Últimos 100 inicios</small></div>
+        <div className="admin-supervision-heading"><div><p className="eyebrow">Trazabilidad</p><h2><KeyRound size={20} aria-hidden="true" />Accesos</h2></div><small>Histórico completo de inicios</small></div>
         {loginRows.length ? <InteractiveTable columns={loginColumns} rows={loginRows} ariaLabel="Historial de accesos" label="accesos" initialSort={{ key: "date", direction: "desc" }} /> : <p className="admin-table-empty">Todavía no hay accesos registrados.</p>}
       </section>
 
       <section className="admin-supervision-panel">
-        <div className="admin-supervision-heading"><div><p className="eyebrow">Registro de cambios</p><h2><ShieldAlert size={20} aria-hidden="true" />Acciones sensibles</h2></div><small>Últimas 100 acciones</small></div>
+        <div className="admin-supervision-heading"><div><p className="eyebrow">Registro de cambios</p><h2><ShieldAlert size={20} aria-hidden="true" />Acciones sensibles</h2></div><small>Histórico completo de acciones</small></div>
         {eventRows.length ? <InteractiveTable columns={eventColumns} rows={eventRows} ariaLabel="Historial de acciones" label="acciones" initialSort={{ key: "date", direction: "desc" }} /> : <p className="admin-table-empty">Todavía no hay acciones sensibles registradas.</p>}
       </section>
 
