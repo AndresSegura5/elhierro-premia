@@ -416,6 +416,7 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
         {isOnline && <button type="button" onClick={() => void syncOutbox()}>Reintentar envío</button>}
       </div>}
       {result && <div className="scanner-side scanner-result" role="status" aria-live="polite">
+        <button type="button" className="scanner-result-close" onClick={resetScanner} aria-label="Cerrar bono" title="Cerrar bono"><X size={22} aria-hidden="true" /></button>
         <div className="scanner-balance-stack">
           {result.coupon.usedCents > 0 && <p className="scanner-balance scanner-balance-spent"><Wallet size={20} aria-hidden="true" /> Saldo gastado: <strong>{formatEuros(result.coupon.usedCents)}</strong></p>}
           <p className="scanner-balance scanner-balance-available"><Wallet size={20} aria-hidden="true" /> Saldo disponible: <strong>{formatEuros(balance)}</strong>{pendingForCoupon > 0 && <small> (incluye {formatEuros(pendingForCoupon)} pendiente de sincronizar)</small>}</p>
@@ -455,6 +456,7 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
             {isOnline && <button type="button" onClick={() => void syncOutbox()}>Reintentar envío</button>}
           </div>}
           {result && <div className="scanner-coupon" role="status" aria-live="polite">
+            <button type="button" className="scanner-result-close" onClick={resetScanner} aria-label="Cerrar bono" title="Cerrar bono"><X size={22} aria-hidden="true" /></button>
             <div className="scanner-balance-stack">
               {result.coupon.usedCents > 0 && <p className="scanner-balance scanner-balance-spent"><Wallet size={20} aria-hidden="true" /> Saldo gastado: <strong>{formatEuros(result.coupon.usedCents)}</strong></p>}
               <p className="scanner-balance scanner-balance-available"><Wallet size={20} aria-hidden="true" /> Saldo disponible: <strong>{formatEuros(balance)}</strong>{pendingForCoupon > 0 && <small> (incluye {formatEuros(pendingForCoupon)} pendiente de sincronizar)</small>}</p>
