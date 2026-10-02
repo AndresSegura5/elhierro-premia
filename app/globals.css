@@ -2931,6 +2931,16 @@ td a {
   color: var(--ink);
   text-align: center;
 }
+.scanner-modal--feedback {
+  width: min(560px, 100%);
+  gap: 20px;
+  padding: 46px 42px;
+}
+.scanner-modal--feedback .scanner-modal-icon { width: 52px; height: 52px; }
+.scanner-modal.scanner-modal--feedback h2 { font-size: 36px; }
+.scanner-modal.scanner-modal--feedback p { max-width: 430px; font-size: 19px; line-height: 1.55; }
+.scanner-modal--feedback .button { min-width: 190px !important; min-height: 54px; font-size: 17px; }
+.scanner-modal--notice .scanner-modal-icon { color: #237a4d; }
 .scanner-modal-close {
   position: absolute;
   top: 12px;
@@ -2954,6 +2964,9 @@ td a {
 @media (max-width: 550px) {
   .scanner-coupon dl, .scanner-spend > div { grid-template-columns: 1fr; }
   .scanner-spend input { min-height: 48px; }
+  .scanner-modal--feedback { gap: 16px; padding: 38px 24px; }
+  .scanner-modal.scanner-modal--feedback h2 { font-size: 30px; }
+  .scanner-modal.scanner-modal--feedback p { font-size: 17px; }
 }
 .manual-form {
   display: grid;

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Camera, CameraOff, Keyboard, ScanLine, Wallet, X } from "lucide-react";
+import { AlertTriangle, Camera, CameraOff, CheckCircle2, Keyboard, ScanLine, Wallet, X } from "lucide-react";
 import jsQR from "jsqr";
 import { formatEuros, parseEuros } from "@/lib/bonos";
 import type { Coupon, Redemption } from "@/lib/types";
@@ -410,8 +410,6 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
         </form>
       </div>}
 
-      {error && <p className="alert scanner-alert" role="alert">{error}</p>}
-      {notice && <p className="scanner-success" role="status">{notice}</p>}
       {pendingRedemptions.length > 0 && <div className="scanner-pending" role="status" aria-live="polite">
         <strong>{pendingRedemptions.length} {pendingRedemptions.length === 1 ? "compra pendiente" : "compras pendientes"}</strong>
         <span>Guardadas en este móvil; se enviarán al recuperar la conexión. Mantén abierta la sesión del comercio hasta que se sincronicen.</span>
@@ -451,8 +449,6 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
               <button type="submit" className="button"><ScanLine size={17} aria-hidden="true" /> Buscar</button>
             </div>
           </form>
-          {error && <p className="alert" role="alert">{error}</p>}
-          {notice && <p className="scanner-success" role="status">{notice}</p>}
           {pendingRedemptions.length > 0 && <div className="scanner-pending" role="status" aria-live="polite">
             <strong>{pendingRedemptions.length} {pendingRedemptions.length === 1 ? "compra pendiente" : "compras pendientes"}</strong>
             <span>Guardadas en este móvil; se enviarán al recuperar la conexión. Mantén abierta la sesión del comercio hasta que se sincronicen.</span>
@@ -469,6 +465,24 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
             </form>}
           </div>}
         </div>
+      </div>}
+      {error && <div className="scanner-modal-backdrop" role="presentation">
+        <section className="scanner-modal scanner-modal--feedback" role="alertdialog" aria-modal="true" aria-labelledby="scanner-error-title">
+          <button type="button" className="scanner-modal-close" onClick={() => setError("")} aria-label="Cerrar aviso"><X size={24} aria-hidden="true" /></button>
+          <AlertTriangle size={48} aria-hidden="true" className="scanner-modal-icon" />
+          <h2 id="scanner-error-title">Aviso</h2>
+          <p>{error}</p>
+          <button type="button" className="button" onClick={() => setError("")}>Entendido</button>
+        </section>
+      </div>}
+      {notice && <div className="scanner-modal-backdrop" role="presentation">
+        <section className="scanner-modal scanner-modal--feedback scanner-modal--notice" role="dialog" aria-modal="true" aria-labelledby="scanner-notice-title">
+          <button type="button" className="scanner-modal-close" onClick={() => setNotice("")} aria-label="Cerrar aviso"><X size={24} aria-hidden="true" /></button>
+          <CheckCircle2 size={48} aria-hidden="true" className="scanner-modal-icon" />
+          <h2 id="scanner-notice-title">Información</h2>
+          <p>{notice}</p>
+          <button type="button" className="button" onClick={() => setNotice("")}>Entendido</button>
+        </section>
       </div>}
       {wrongBusiness && <div className="scanner-modal-backdrop" role="presentation">
         <section className="scanner-modal" role="dialog" aria-modal="true" aria-labelledby="scanner-wrong-business-title">
