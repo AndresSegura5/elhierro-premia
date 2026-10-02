@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { ArrowUpRight, ChevronDown, Clock3, MapPin, Menu, Phone, Store, UserRound, X } from "lucide-react";
+import { ArrowUpRight, ChevronDown, ChevronRight, Clock3, LogOut, MapPin, Menu, Phone, Settings, Store, TicketPercent, UserRound, X } from "lucide-react";
 import { logout } from "@/app/auth-actions";
 import { localPhoneNumber } from "@/lib/phone";
 export function Header({ merchantName, merchantAddress, merchantPhone, merchantHours, username, isAdmin = false }: { merchantName?: string; merchantAddress?: string; merchantPhone?: string; merchantHours?: string; username?: string; isAdmin?: boolean }) {
@@ -45,24 +45,35 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
           {menuOpen ? <X size={24} aria-hidden="true" /> : <Menu size={24} aria-hidden="true" />}
         </button>
         <nav id="primary-navigation" className={`main-nav${menuOpen ? " main-nav--open" : ""}`} aria-label="Navegación principal">
-          <Link href="/comercios" onClick={() => setMenuOpen(false)} aria-current={pathname === "/comercios" ? "page" : undefined}>Comercios</Link>
-          <Link href="/bono" onClick={() => setMenuOpen(false)} aria-current={pathname === "/bono" ? "page" : undefined}>El bono</Link>
+          <Link href="/comercios" onClick={() => setMenuOpen(false)} aria-current={pathname === "/comercios" ? "page" : undefined}>
+            <Store className="nav-mobile-menu-icon" size={30} aria-hidden="true" />
+            Comercios
+            <ChevronRight className="nav-mobile-menu-arrow" size={30} aria-hidden="true" />
+          </Link>
+          <Link href="/bono" onClick={() => setMenuOpen(false)} aria-current={pathname === "/bono" ? "page" : undefined}>
+            <TicketPercent className="nav-mobile-menu-icon" size={30} aria-hidden="true" />
+            El bono
+            <ChevronRight className="nav-mobile-menu-arrow" size={30} aria-hidden="true" />
+          </Link>
           {merchantName ? (
             <>
               <details className="nav-merchant-menu" ref={merchantMenuRef}>
                 <summary aria-label={`Menú de ${merchantName}`}>
-                  <Store size={16} />
+                  <Store className="nav-merchant-store-icon" size={30} aria-hidden="true" />
                   <span>{merchantName}</span>
-                  <ChevronDown size={15} aria-hidden="true" />
+                  <ChevronDown className="nav-merchant-chevron-down" size={15} aria-hidden="true" />
+                  <ChevronRight className="nav-mobile-menu-arrow" size={30} aria-hidden="true" />
                 </summary>
                 <div className="nav-merchant-popover">
-                  <strong>{merchantName}</strong>
-                  <div className="nav-merchant-details" aria-label="Datos del comercio">
-                    <span><Clock3 size={15} aria-hidden="true" />{merchantHours || "Horario no disponible"}</span>
-                    <span><MapPin size={15} aria-hidden="true" />{merchantAddress || "Dirección no disponible"}</span>
-                    <span><Phone size={15} aria-hidden="true" />{merchantPhone ? localPhoneNumber(merchantPhone) : "Teléfono no disponible"}</span>
+                  <div className="nav-merchant-info-card">
+                    <strong>{merchantName}</strong>
+                    <div className="nav-merchant-details" aria-label="Datos del comercio">
+                      <span><Clock3 size={22} aria-hidden="true" /><span><small>Horario</small><b>{merchantHours || "Horario no disponible"}</b></span></span>
+                      <span><MapPin size={22} aria-hidden="true" /><span><small>Dirección</small><b>{merchantAddress || "Dirección no disponible"}</b></span></span>
+                      <span><Phone size={22} aria-hidden="true" /><span><small>Teléfono</small><b>{merchantPhone ? localPhoneNumber(merchantPhone) : "Teléfono no disponible"}</b></span></span>
+                    </div>
                   </div>
-                  {username && <form action={logout}><button type="submit">Cerrar sesión</button></form>}
+                  {username && <form className="nav-merchant-logout" action={logout}><button type="submit"><LogOut size={25} aria-hidden="true" />Cerrar sesión</button></form>}
                 </div>
               </details>
             </>
@@ -91,8 +102,10 @@ export function Header({ merchantName, merchantAddress, merchantPhone, merchantH
             </>
           ) : (
             <Link href="/admin" onClick={() => setMenuOpen(false)} className="nav-admin nav-icon" title="Administración" aria-label="Administración" aria-current={pathname.startsWith("/admin") ? "page" : undefined}>
-              <UserRound size={19} aria-hidden="true" />
+              <Settings className="nav-mobile-menu-icon" size={30} aria-hidden="true" />
+              <UserRound className="nav-desktop-admin-icon" size={19} aria-hidden="true" />
               <span className="nav-mobile-label">Administración</span>
+              <ChevronRight className="nav-mobile-menu-arrow" size={30} aria-hidden="true" />
             </Link>
           )}
         </nav>

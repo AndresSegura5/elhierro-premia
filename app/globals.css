@@ -246,7 +246,10 @@ body > main { margin-top: 0; margin-bottom: 0; }
   font-size: 14px;
 }
 .nav-merchant-details { display: grid; gap: 8px; margin: 0 0 14px; }
-.nav-merchant-details span { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: start; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 500; line-height: 1.45; overflow-wrap: anywhere; }
+.nav-merchant-details > span { display: grid; grid-template-columns: 22px minmax(0, 1fr); align-items: start; gap: 8px; color: var(--muted); font-size: 12px; font-weight: 500; line-height: 1.45; overflow-wrap: anywhere; }
+.nav-merchant-details > span > span { display: grid; gap: 3px; min-width: 0; }
+.nav-merchant-details small { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.nav-merchant-details b { color: var(--ink); font-weight: 500; }
 .nav-merchant-details svg { margin-top: 1px; color: var(--accent); }
 .nav-merchant-popover form { margin: 0; }
 .nav-merchant-popover button {
@@ -3259,7 +3262,14 @@ td a {
     border-bottom: 1px solid var(--line);
     border-radius: 0;
     background: transparent;
-    font-size: 19px;
+    color: var(--ink);
+    font-size: 30px !important;
+    font-weight: 500;
+    line-height: 1.35;
+  }
+  .site-header--menu-open .nav-merchant-menu > summary span {
+    font-size: 30px !important;
+    font-weight: 500;
   }
   .site-header--menu-open .nav-merchant-menu > summary > svg:first-child { display: none; }
   .site-header--menu-open .nav-merchant-menu > summary > svg:last-child {
@@ -3276,14 +3286,41 @@ td a {
   }
   .site-header--menu-open .nav-merchant-popover {
     position: static;
-    width: 100%;
-    padding: 12px 0 16px 24px;
-    border: 0;
-    border-radius: 0;
-    background: transparent;
+    box-sizing: border-box;
+    width: calc(100% - 24px);
+    max-width: none;
+    min-width: 0;
+    margin: 12px 0 18px 24px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #f7fafb;
     box-shadow: none;
   }
-  .site-header--menu-open .nav-merchant-popover strong { font-size: 16px; }
+  .site-header--menu-open .nav-merchant-details {
+    width: 100%;
+    min-width: 0;
+  }
+  .site-header--menu-open .nav-merchant-details span {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: none;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+  .site-header--menu-open .nav-merchant-popover strong {
+    margin-bottom: 14px;
+    font-size: 19px !important;
+  }
+  .site-header--menu-open .nav-merchant-popover button {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--ink);
+    text-align: center;
+  }
   .site-header--menu-open .mobile-menu-toggle {
     border-color: var(--ink);
     background: var(--ink);
@@ -4955,6 +4992,11 @@ body :not(h1, h2, h3, h4, h5, h6):not(:is(h1, h2, h3, h4, h5, h6) *) {
 .nav-account-menu > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .nav-mobile-label { display: none; }
 .nav-mobile-logout { display: none; }
+.nav-mobile-menu-icon,
+.nav-mobile-menu-arrow { display: none; }
+.nav-merchant-store-icon { width: 16px; height: 16px; }
+.nav-merchant-chevron-down { display: inline-block; }
+.nav-desktop-admin-icon { display: inline-block; }
 .brand-affiliations em { color: var(--accent-dark); font-style: normal; font-weight: 700; }
 
 @media (max-width: 760px) {
@@ -5372,3 +5414,205 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-business
 body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-merchant { padding-block: 2px; }
 body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-dates { gap: 7px; line-height: 1.16; }
 body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details { gap: 7px; }
+
+/* Mobile menu: mirror the spacious, icon-led navigation used in the merchant reference. */
+@media (max-width: 760px) {
+  .site-header--menu-open .main-nav > a {
+    justify-content: flex-start;
+    gap: 24px;
+    min-height: 76px;
+    padding: 0 18px;
+    border-bottom: 1px solid var(--line);
+    font-size: 30px !important;
+    font-weight: 500;
+    line-height: 1.2;
+    text-align: left;
+  }
+
+  .site-header--menu-open .main-nav > a .nav-mobile-menu-icon,
+  .site-header--menu-open .main-nav > a .nav-mobile-menu-arrow,
+  .site-header--menu-open .nav-merchant-menu > summary .nav-merchant-store-icon,
+  .site-header--menu-open .nav-merchant-menu > summary .nav-mobile-menu-arrow,
+  .site-header--menu-open .nav-admin .nav-mobile-menu-icon,
+  .site-header--menu-open .nav-admin .nav-mobile-menu-arrow {
+    display: block !important;
+    flex: 0 0 auto;
+  }
+
+  .site-header--menu-open .main-nav > a .nav-mobile-menu-icon,
+  .site-header--menu-open .nav-merchant-menu > summary .nav-merchant-store-icon,
+  .site-header--menu-open .nav-admin .nav-mobile-menu-icon {
+    width: 30px;
+    height: 30px;
+    color: var(--ink);
+  }
+
+  .site-header--menu-open .main-nav > a .nav-mobile-menu-arrow,
+  .site-header--menu-open .nav-merchant-menu > summary .nav-mobile-menu-arrow {
+    width: 30px;
+    height: 30px;
+    margin-left: auto;
+    color: #607289 !important;
+  }
+
+  .site-header--menu-open .nav-merchant-menu {
+    width: 100%;
+    margin: 10px 0 0;
+    border: 0;
+  }
+
+  .site-header--menu-open .nav-merchant-menu > summary {
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) 30px;
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+    min-height: 76px;
+    margin: 0;
+    padding: 0 18px;
+    border: 0;
+    border-radius: 18px;
+    background: #fff1e5;
+    color: var(--ink);
+    font-size: 30px !important;
+    font-weight: 500;
+    line-height: 1.2;
+  }
+
+  .site-header--menu-open .nav-merchant-menu > summary span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 30px !important;
+    font-weight: 500;
+  }
+
+  .site-header--menu-open .nav-merchant-menu > summary .nav-merchant-chevron-down {
+    display: none !important;
+  }
+
+  .site-header--menu-open .nav-merchant-menu[open] > summary,
+  .site-header--menu-open .nav-merchant-menu > summary:hover {
+    background: #fff1e5;
+    color: var(--ink);
+  }
+
+  .site-header--menu-open .nav-merchant-popover {
+    display: block;
+    width: auto;
+    max-width: none;
+    min-width: 0;
+    margin: 18px 20px 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .site-header--menu-open .nav-merchant-info-card {
+    padding: 24px 20px;
+    border: 1px solid #e7edf2;
+    border-radius: 20px;
+    background: #f7fafb;
+    box-shadow: 0 12px 30px rgb(7 22 38 / 6%);
+  }
+
+  .site-header--menu-open .nav-merchant-info-card > strong {
+    display: block;
+    margin: 0 0 22px;
+    color: var(--ink);
+    font-size: 27px !important;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  .site-header--menu-open .nav-merchant-details {
+    display: grid;
+    gap: 0;
+    width: 100%;
+    margin: 0;
+  }
+
+  .site-header--menu-open .nav-merchant-details > span {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    min-width: 0;
+    padding: 18px 0;
+    border-bottom: 1px solid #e0e8ee;
+    color: var(--ink);
+  }
+
+  .site-header--menu-open .nav-merchant-details > span:first-child { padding-top: 0; }
+  .site-header--menu-open .nav-merchant-details > span:last-child { padding-bottom: 0; border-bottom: 0; }
+
+  .site-header--menu-open .nav-merchant-details > span > svg {
+    display: block !important;
+    width: 52px;
+    height: 52px;
+    margin: 0;
+    padding: 13px;
+    border-radius: 50%;
+    background: #fff1e5;
+    color: var(--accent);
+  }
+
+  .site-header--menu-open .nav-merchant-details > span > span {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .site-header--menu-open .nav-merchant-details small {
+    color: #66758b;
+    font-size: 12px !important;
+    font-weight: 500;
+    letter-spacing: .1em;
+    line-height: 1.2;
+    text-transform: uppercase;
+  }
+
+  .site-header--menu-open .nav-merchant-details b {
+    color: var(--ink);
+    font-size: 18px !important;
+    font-weight: 500;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+  }
+
+  .site-header--menu-open .nav-merchant-logout { margin: 18px 0 0; }
+
+  .site-header--menu-open .nav-merchant-logout button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 18px;
+    width: 100%;
+    min-height: 76px;
+    padding: 0 24px;
+    border: 1px solid var(--ink);
+    border-radius: 18px;
+    background: var(--ink);
+    color: #fff;
+    font-size: 23px !important;
+    font-weight: 700;
+    text-align: left;
+  }
+
+  .site-header--menu-open .nav-merchant-logout button svg {
+    display: block !important;
+    width: 30px;
+    height: 30px;
+    flex: 0 0 auto;
+  }
+
+  .site-header--menu-open .nav-admin .nav-desktop-admin-icon { display: none !important; }
+  .site-header--menu-open .nav-admin .nav-mobile-menu-icon,
+  .site-header--menu-open .nav-admin .nav-mobile-menu-arrow { display: block !important; }
+  .site-header--menu-open .nav-admin .nav-mobile-menu-icon { color: var(--ink); }
+  .site-header--menu-open .nav-mobile-label { display: inline; font-size: 30px !important; font-weight: 500; }
+}
