@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Camera, CameraOff, CheckCircle2, Keyboard, ScanLine, Wallet, X } from "lucide-react";
+import { AlertTriangle, Camera, CameraOff, Keyboard, ScanLine, Wallet, X } from "lucide-react";
 import jsQR from "jsqr";
 import { formatEuros, parseEuros } from "@/lib/bonos";
 import type { Coupon, Redemption } from "@/lib/types";
@@ -418,15 +418,13 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
         {isOnline && <button type="button" onClick={() => void syncOutbox()}>Reintentar envío</button>}
       </div>}
       {result && <div className="scanner-side scanner-result" role="status" aria-live="polite">
-        <div className="scanner-coupon-head"><CheckCircle2 size={20} aria-hidden="true" /><button type="button" className="scanner-restart" onClick={resetScanner} aria-label="Consultar otro bono" title="Consultar otro bono"><ScanLine size={18} aria-hidden="true" /></button></div>
         <div className="scanner-balance-stack">
           {result.coupon.usedCents > 0 && <p className="scanner-balance scanner-balance-spent"><Wallet size={20} aria-hidden="true" /> Saldo gastado: <strong>{formatEuros(result.coupon.usedCents)}</strong></p>}
-          <p className="scanner-balance"><Wallet size={20} aria-hidden="true" /> Saldo disponible: <strong>{formatEuros(balance)}</strong>{pendingForCoupon > 0 && <small> (incluye {formatEuros(pendingForCoupon)} pendiente de sincronizar)</small>}</p>
+          <p className="scanner-balance scanner-balance-available"><Wallet size={20} aria-hidden="true" /> Saldo disponible: <strong>{formatEuros(balance)}</strong>{pendingForCoupon > 0 && <small> (incluye {formatEuros(pendingForCoupon)} pendiente de sincronizar)</small>}</p>
         </div>
         {canRedeem && result.coupon.businessId === businessId && <form className="scanner-spend" onSubmit={registerExpense}>
           <label htmlFor="expense-amount">Importe de la compra</label>
           <div><input ref={expenseInputRef} id="expense-amount" type="text" inputMode="decimal" placeholder="0,00" value={amount} onChange={(event) => setAmount(event.target.value)} required /><button type="submit" className="button" disabled={busy}>{busy ? "Guardando..." : "Guardar gasto"}</button></div>
-          <small>Máximo disponible: {formatEuros(balance)}.</small>
         </form>}
       </div>}
       </> : <div className="scanner-desktop">
@@ -461,15 +459,13 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
             {isOnline && <button type="button" onClick={() => void syncOutbox()}>Reintentar envío</button>}
           </div>}
           {result && <div className="scanner-coupon" role="status" aria-live="polite">
-            <div className="scanner-coupon-head"><CheckCircle2 size={20} aria-hidden="true" /></div>
             <div className="scanner-balance-stack">
               {result.coupon.usedCents > 0 && <p className="scanner-balance scanner-balance-spent"><Wallet size={20} aria-hidden="true" /> Saldo gastado: <strong>{formatEuros(result.coupon.usedCents)}</strong></p>}
-              <p className="scanner-balance"><Wallet size={20} aria-hidden="true" /> Saldo disponible: <strong>{formatEuros(balance)}</strong>{pendingForCoupon > 0 && <small> (incluye {formatEuros(pendingForCoupon)} pendiente de sincronizar)</small>}</p>
+              <p className="scanner-balance scanner-balance-available"><Wallet size={20} aria-hidden="true" /> Saldo disponible: <strong>{formatEuros(balance)}</strong>{pendingForCoupon > 0 && <small> (incluye {formatEuros(pendingForCoupon)} pendiente de sincronizar)</small>}</p>
             </div>
             {canRedeem && result.coupon.businessId === businessId && <form className="scanner-spend" onSubmit={registerExpense}>
               <label htmlFor="expense-amount">Importe de la compra</label>
               <div><input ref={expenseInputRef} id="expense-amount" type="text" inputMode="decimal" placeholder="0,00" value={amount} onChange={(event) => setAmount(event.target.value)} required /><button type="submit" className="button" disabled={busy}>{busy ? "Guardando..." : "Guardar gasto"}</button></div>
-              <small>Máximo disponible: {formatEuros(balance)}.</small>
             </form>}
           </div>}
         </div>
