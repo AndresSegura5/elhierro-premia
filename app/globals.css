@@ -5474,8 +5474,10 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
     border-bottom: 1px solid var(--line);
     border-radius: 0;
     background: transparent;
-    font-size: 24px !important;
+    font-size: 30px !important;
+    font-weight: 500;
     line-height: 1.2;
+    text-align: left;
   }
 
   .site-header--menu-open .main-nav > a .nav-mobile-menu-icon,
