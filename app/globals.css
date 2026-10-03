@@ -461,7 +461,9 @@ body > main { margin-top: 0; margin-bottom: 0; }
 .hero-voucher-title em { color: var(--accent-dark); font-style: normal; }
 .hero-voucher-action { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 6px; width: fit-content; color: #0c1622; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; transition: gap .25s ease, color .25s ease; }
 .hero-voucher-action svg { flex: 0 0 auto; color: var(--accent-dark); }
-.hero-voucher-stub { display: grid; place-items: center; padding: 16px 14px; background: linear-gradient(160deg, var(--accent), var(--accent-dark)); }
+.hero-voucher-stub { position: relative; display: grid; place-items: center; padding: 16px 14px; background: linear-gradient(160deg, var(--accent), var(--accent-dark)); }
+.hero-voucher-stub::before { position: absolute; top: 16px; bottom: 16px; left: -1px; border-left: 2px dashed rgba(12, 22, 34, .45); content: ""; }
+.hero-voucher-cut { position: absolute; top: 30px; left: 0; z-index: 1; display: grid; width: 28px; height: 28px; place-items: center; border-radius: 50%; background: #fffaf2; color: #0c1622; box-shadow: 0 0 0 2px #fffaf2, 0 2px 6px rgba(12, 22, 34, .25); transform: translateX(-50%) rotate(90deg); }
 .hero-voucher-qr { width: 100%; aspect-ratio: 1; padding: 6px; border-radius: 8px; background: #fff; }
 .hero-voucher-qr .qr-ticket { display: contents; }
 .hero-voucher-qr .qr-frame { width: 100%; }
@@ -1179,7 +1181,7 @@ body > main { margin-top: 0; margin-bottom: 0; }
   top: calc(100% + 8px);
   left: 0;
   width: 100%;
-  max-height: 220px;
+  max-height: 320px;
   overflow: auto;
   border: 1px solid rgba(8, 50, 91, .12);
   border-radius: 8px;
@@ -1190,7 +1192,8 @@ body > main { margin-top: 0; margin-bottom: 0; }
   margin: 0;
   padding: 13px 17px 9px;
   color: #626b75;
-  font: 700 10px var(--font-sans);
+  font: 700 12px var(--font-sans);
+  letter-spacing: .04em;
   text-transform: uppercase;
 }
 .commerce-search-results ul {
@@ -1206,8 +1209,8 @@ body > main { margin-top: 0; margin-bottom: 0; }
   align-items: center;
   gap: 12px;
   width: 100%;
-  min-height: 59px;
-  padding: 9px 11px;
+  min-height: 66px;
+  padding: 11px 12px;
   border: 0;
   border-radius: 5px;
   background: transparent;
@@ -1231,11 +1234,13 @@ body > main { margin-top: 0; margin-bottom: 0; }
   flex: 1;
 }
 .commerce-search-results li strong {
-  font-size: 12px;
+  font-size: 15px;
+  line-height: 1.25;
 }
 .commerce-search-results li small {
   color: #626b75;
-  font-size: 10px;
+  font-size: 13px;
+  line-height: 1.3;
   overflow-wrap: anywhere;
 }
 .commerce-search-results li button > svg:last-child {
@@ -1246,7 +1251,7 @@ body > main { margin-top: 0; margin-bottom: 0; }
   display: block;
   padding: 10px 17px 19px;
   color: #626b75;
-  font-size: 12px;
+  font-size: 14px;
 }
 .commerce-categories {
   display: flex;
@@ -1340,9 +1345,14 @@ body > main { margin-top: 0; margin-bottom: 0; }
 .municipality-weather-label--light { color: #071626; text-shadow: 0 2px 5px rgba(255, 255, 255, .72); }
 .municipality-weather-label--light strong { color: #071626; }
 .municipality-weather-label--light .municipality-weather-icon { color: #ff7a1a; }
+.municipality-weather-label--coast { display: flex; height: 100%; }
+.municipality-weather-label--start { justify-content: flex-start; min-width: 0; margin: 0; }
 @media (max-width: 760px) {
   .weather-widget { top: 12px; left: 12px; width: min(240px, calc(100% - 24px)); }
   .weather-widget-summary { min-height: 68px; }
+  .municipality-weather-label { gap: 5px; }
+  .municipality-weather-label strong { font-size: 16px; }
+  .municipality-weather-icon svg { width: 18px; height: 18px; }
 }
 .commerce-map-panel .map-count {
   display: none;
@@ -5476,7 +5486,7 @@ td a {
 
 @media (max-width: 599px) {
   .hero-voucher { --stub: 46%; justify-self: stretch; }
-  .hero-voucher-info { gap: 16px; padding: 22px 12px 20px 20px; }
+  .hero-voucher-info { align-content: center; gap: 14px; padding: 22px 12px 20px 20px; }
   .hero-voucher-title { font-size: 22px; }
   .hero-voucher-title em { margin: 2px 0; font-size: 2.3em; line-height: .9; }
   .hero-voucher-action { font-size: 10px; letter-spacing: .08em; }

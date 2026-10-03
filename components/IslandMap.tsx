@@ -32,6 +32,41 @@ const MUNICIPALITY_LABEL_POSITIONS: Record<string, [number, number]> = {
   VALVERDE: [27.83, -17.87],
   "EL PINAR": [27.68, -18.07],
 };
+type CoastSide = "north" | "south" | "east";
+// On narrow maps the island fills the frame, so each label sits a fixed distance
+// off its own stretch of coast, found where this line crosses the island outline.
+const COMPACT_LABEL_COASTS: Record<string, { lat?: number; lng?: number; side: CoastSide }> = {
+  FRONTERA: { lng: -18.07, side: "north" },
+  "EL PINAR": { lng: -18.08, side: "south" },
+  VALVERDE: { lat: 27.77, side: "east" },
+};
+const COMPACT_EAST_LABEL_WIDTH = 80;
+const COMPACT_EAST_LABEL_MIN_LAT = 27.7;
+const COMPACT_MAP_WIDTH = 720;
+const COMPACT_LABEL_GAP = 10;
+const COMPACT_LABEL_SIZE: [number, number] = [104, 24];
+
+function coastPoint(coords: [number, number][], { lat, lng, side }: { lat?: number; lng?: number; side: CoastSide }) {
+  const fixed = lng === undefined ? 0 : 1;
+  const value = (lng ?? lat)!;
+  const crossings: number[] = [];
+  coords.forEach((a, index) => {
+    const b = coords[(index + 1) % coords.length];
+    if (a[fixed] === b[fixed] || (a[fixed] - value) * (b[fixed] - value) > 0) return;
+    const t = (value - a[fixed]) / (b[fixed] - a[fixed]);
+    crossings.push(a[1 - fixed] + t * (b[1 - fixed] - a[1 - fixed]));
+  });
+  if (!crossings.length) return undefined;
+  const edge = side === "south" ? Math.min(...crossings) : Math.max(...crossings);
+  return (fixed === 1 ? [edge, value] : [value, edge]) as [number, number];
+}
+
+function compactLabelAnchor(side: CoastSide): [number, number] {
+  const [width, height] = COMPACT_LABEL_SIZE;
+  if (side === "north") return [width / 2, height + COMPACT_LABEL_GAP];
+  if (side === "south") return [width / 2, -COMPACT_LABEL_GAP];
+  return [-COMPACT_LABEL_GAP, height / 2];
+}
 
 function weatherIconMarkup(code: number) {
   const Icon = code === 0 ? Sun
@@ -266,7 +301,22 @@ export function IslandMap({
             const rawName = String(feature.properties?.nombre ?? "").trim();
             const weather = municipalityWeather.get(rawName.toUpperCase());
             if (showMunicipalities && weather) {
-              const labelPosition = MUNICIPALITY_LABEL_POSITIONS[rawName.toUpperCase()];
+              const coast = instance.getSize().x < COMPACT_MAP_WIDTH ? COMPACT_LABEL_COASTS[rawName.toUpperCase()] : undefined;
+              let coastPosition = coast && coastPoint(islandCoords, coast);
+              // Labels are placed before the map fits the island, so measure against that final view.
+              // The east label slides down the coast until it fits inside the frame.
+              if (coast?.side === "east" && coastPosition) {
+                const islandBounds = L.latLngBounds(islandCoords);
+                const padding = clipToIsland ? 12 : 24;
+                const fitZoom = instance.getBoundsZoom(islandBounds, false, L.point(padding, padding)) + (clipToIsland ? 0.1 : 0);
+                const frameRight = instance.project(islandBounds.getCenter(), fitZoom).x + instance.getSize().x / 2;
+                while (coastPosition && coastPosition[0] > COMPACT_EAST_LABEL_MIN_LAT
+                  && instance.project(coastPosition, fitZoom).x + COMPACT_LABEL_GAP + COMPACT_EAST_LABEL_WIDTH > frameRight) {
+                  coastPosition = coastPoint(islandCoords, { ...coast, lat: coastPosition[0] - 0.005 });
+                }
+              }
+              const labelPosition = coastPosition ?? MUNICIPALITY_LABEL_POSITIONS[rawName.toUpperCase()];
+              const startAligned = Boolean(coastPosition) && coast?.side === "east";
               if (labelPosition) {
                 L.marker(labelPosition, {
                   interactive: false,
@@ -274,9 +324,9 @@ export function IslandMap({
                   pane: "weatherPane",
                   icon: L.divIcon({
                     className: "municipality-weather-label-marker",
-                    html: `<span class="municipality-weather-label${weatherTheme === "light" ? " municipality-weather-label--light" : ""}"><span class="municipality-weather-icon">${weatherIconMarkup(weather.weatherCode)}</span><strong>${weather.temperature}</strong></span>`,
-                    iconSize: [104, 42],
-                    iconAnchor: [52, 21],
+                    html: `<span class="municipality-weather-label${weatherTheme === "light" ? " municipality-weather-label--light" : ""}${coastPosition ? " municipality-weather-label--coast" : ""}${startAligned ? " municipality-weather-label--start" : ""}"><span class="municipality-weather-icon">${weatherIconMarkup(weather.weatherCode)}</span><strong>${weather.temperature}</strong></span>`,
+                    iconSize: coastPosition ? COMPACT_LABEL_SIZE : [104, 42],
+                    iconAnchor: coast && coastPosition ? compactLabelAnchor(coast.side) : [52, 21],
                   }),
                 }).addTo(instance);
               }
