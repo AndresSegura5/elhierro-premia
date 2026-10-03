@@ -17,6 +17,8 @@ const adapters = {
   "./store-sqlite": moduleUrl("export function getDatabase(){return globalThis.__authSessionFixture.db} export function demoWritesEnabled(){return true} export function isBusinessActive(id){return !!getDatabase().prepare('SELECT active FROM businesses WHERE id = ?').get(id)?.active} export function getBusinessRecord(){} export function makeBusinessId(){}"),
   "./business-credentials": moduleUrl("export function initialBusinessUsername(name){return name}"),
   "./auth-sqlite": moduleUrl("export {}"),
+  "./live": moduleUrl("export async function publishLive(scopes){globalThis.__authSessionFixture.published?.push(scopes)}"),
+  "./live-scopes": moduleUrl("export const liveScope={admin:\"admin\",public:\"public\",merchants:\"merchants\",business:(id)=>\"business:\"+id,coupon:(c)=>\"coupon:\"+c,race:(id)=>\"race:\"+id}"),
 };
 
 async function loadAuth(filename) {

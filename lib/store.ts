@@ -7,6 +7,8 @@ import { addDays, BONO_CENTS, couponStatus } from "./bonos";
 import { couponRules, raceDefaults, siteContentDefaults } from "./data";
 import { legalContentDefaults } from "./legal-content";
 import { chooseLeastAssignedBusiness } from "./coupon-assignment";
+import { publishLive } from "./live";
+import { liveScope } from "./live-scopes";
 import { businessCategories } from "./business-categories";
 import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, ManagedBusiness, MerchantAccountAuditRecord, Municipality, Race, Redemption, RedemptionAuditRecord, LoginAuditRecord } from "./types";
 
@@ -179,7 +181,11 @@ export async function isBusinessActive(id: string | null | undefined): Promise<b
 }
 
 export async function updateBusinessRecord(business: Business) {
-  if (!hasPostgresDatabase()) return sqliteStore.updateBusinessRecord(business);
+  if (!hasPostgresDatabase()) {
+    sqliteStore.updateBusinessRecord(business);
+    await publishLive([liveScope.admin, liveScope.public, liveScope.business(business.id)]);
+    return;
+  }
   const result = await getPostgres()`
     UPDATE public.businesses SET name = ${business.name}, category = ${business.category}, municipality = ${business.municipality},
       area = ${business.area}, phone = ${business.phone}, address = ${business.address}, lat = ${business.lat}, lng = ${business.lng},
@@ -187,6 +193,7 @@ export async function updateBusinessRecord(business: Business) {
     WHERE id = ${business.id}
   `;
   if (!result.count) throw new Error("No se encontró el comercio que quieres editar.");
+  await publishLive([liveScope.admin, liveScope.public, liveScope.business(business.id)]);
 }
 
 export async function getGeocodingCache(cacheKey: string): Promise<{ lat: number; lng: number } | undefined> {
@@ -338,7 +345,11 @@ function validateRaceConfiguration(couponQuantity: number, raceDate: string, sta
 }
 
 export async function saveRaceConfiguration(id: string, couponQuantity: number, raceDate: string, startDate: string, validityDays: number) {
-  if (!hasPostgresDatabase()) return sqliteStore.saveRaceConfiguration(id, couponQuantity, raceDate, startDate, validityDays);
+  if (!hasPostgresDatabase()) {
+    sqliteStore.saveRaceConfiguration(id, couponQuantity, raceDate, startDate, validityDays);
+    await publishLive([liveScope.admin, liveScope.public, liveScope.merchants, liveScope.race(id)]);
+    return;
+  }
   validateRaceConfiguration(couponQuantity, raceDate, startDate, validityDays);
   const sql = getPostgres();
   await sql.begin(async (tx) => {
@@ -347,11 +358,16 @@ export async function saveRaceConfiguration(id: string, couponQuantity: number, 
     const [issued] = await tx`SELECT count(*)::int AS total FROM public.coupons WHERE race_id = ${id}`;
     if (couponQuantity < Number(issued.total)) throw new Error(`Ya hay ${issued.total} bonos emitidos; la cantidad prevista no puede ser menor.`);
     await tx`UPDATE public.races SET coupon_quantity = ${couponQuantity}, race_date = ${raceDate}, start_date = ${startDate}, validity_days = ${validityDays} WHERE id = ${id}`;
+    await publishLive([liveScope.admin, liveScope.public, liveScope.merchants, liveScope.race(id)], tx);
   });
 }
 
 export async function issueMissingCoupons(raceId: string) {
-  if (!hasPostgresDatabase()) return sqliteStore.issueMissingCoupons(raceId);
+  if (!hasPostgresDatabase()) {
+    const issued = sqliteStore.issueMissingCoupons(raceId);
+    if (issued > 0) await publishLive([liveScope.admin]);
+    return issued;
+  }
   const sql = getPostgres();
   return sql.begin(async (tx) => {
     const [raceRow] = await tx<RaceRecord[]>`SELECT * FROM public.races WHERE id = ${raceId} FOR UPDATE`;
@@ -391,12 +407,17 @@ export async function issueMissingCoupons(raceId: string) {
       assignedCoupons.set(business.id, (assignedCoupons.get(business.id) ?? 0) + 1);
       generated += 1;
     }
+    if (generated > 0) await publishLive([liveScope.admin], tx);
     return generated;
   });
 }
 
 export async function deleteRaceCoupons(raceId: string, actor?: { id: number; username: string }) {
-  if (!hasPostgresDatabase()) return sqliteStore.deleteRaceCoupons(raceId);
+  if (!hasPostgresDatabase()) {
+    const removed = sqliteStore.deleteRaceCoupons(raceId);
+    await publishLive([liveScope.admin, liveScope.merchants, liveScope.race(raceId)]);
+    return removed;
+  }
   const sql = getPostgres();
   return sql.begin(async (tx) => {
     const [race] = await tx`SELECT id FROM public.races WHERE id = ${raceId} FOR UPDATE`;
@@ -411,12 +432,17 @@ export async function deleteRaceCoupons(raceId: string, actor?: { id: number; us
     await tx`UPDATE public.coupons SET deleted_at = ${deletedAt}, deleted_by = ${actor?.id ?? null} WHERE race_id = ${raceId} AND deleted_at IS NULL`;
     await tx`INSERT INTO public.audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at)
       VALUES (${actor?.id ?? null}, ${actor?.username ?? null}, 'delete_coupons', 'race', ${raceId}, ${`${Number(coupons.total)} bonos y ${Number(redemptions.total)} movimientos marcados como eliminados`}, ${deletedAt})`;
+    await publishLive([liveScope.admin, liveScope.merchants, liveScope.race(raceId)], tx);
     return { removedCoupons: previousCoupons, removedRedemptions: Number(redemptions.total) };
   });
 }
 
 export async function redeemCoupon(code: string, businessId: string, amountCents: number, now = new Date(), idempotencyKey?: string) {
-  if (!hasPostgresDatabase()) return sqliteStore.redeemCoupon(code, businessId, amountCents, now, idempotencyKey);
+  if (!hasPostgresDatabase()) {
+    const details = sqliteStore.redeemCoupon(code, businessId, amountCents, now, idempotencyKey);
+    await publishLive([liveScope.admin, liveScope.business(businessId), liveScope.coupon(code)]);
+    return details;
+  }
   if (!Number.isSafeInteger(amountCents) || amountCents <= 0) throw new Error("Introduce un importe mayor que cero.");
   const normalized = code.trim().toUpperCase();
   const sql = getPostgres();
@@ -447,6 +473,7 @@ export async function redeemCoupon(code: string, businessId: string, amountCents
     await tx`UPDATE public.coupons SET used_cents = used_cents + ${amountCents} WHERE code = ${normalized}`;
     await tx`INSERT INTO public.redemptions (code, business_id, amount_cents, balance_after_cents, created_at, idempotency_key)
       VALUES (${normalized}, ${businessId}, ${amountCents}, ${newBalance}, ${now.toISOString()}, ${idempotencyKey ?? null})`;
+    await publishLive([liveScope.admin, liveScope.business(businessId), liveScope.coupon(normalized)], tx);
   });
   return getCouponDetails(normalized);
 }

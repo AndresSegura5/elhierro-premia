@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, Camera, CameraOff, CheckCircle2, Keyboard, ScanLine, Wallet, X } from "lucide-react";
 import jsQR from "jsqr";
-import { formatEuros, parseEuros } from "@/lib/bonos";
+import { formatEuros, parseEuros, validityInstantsBetween } from "@/lib/bonos";
 import type { Coupon, Redemption } from "@/lib/types";
 import { normalizeCouponCode } from "@/lib/coupon-code";
 import { getPendingRedemptions, removePendingRedemption, savePendingRedemption, type PendingRedemption } from "@/lib/redemption-outbox";
@@ -349,12 +349,54 @@ export function Scanner({ businessName, businessId }: { businessName: string; bu
   const pendingForCoupon = result ? pendingRedemptions.filter((entry) => entry.code === result.coupon.code).reduce((sum, entry) => sum + entry.amountCents, 0) : 0;
   const balance = Math.max(0, serverBalance - pendingForCoupon);
   const canRedeem = result?.coupon.status === "available" || result?.coupon.status === "partial";
+  const resultCode = result?.coupon.code;
+  const resultStart = result?.coupon.startDate;
+  const resultEnd = result?.coupon.expiresAt;
+
+  // El bono cargado vive en este navegador: se vuelve a consultar cuando otro móvil de la tienda cobra,
+  // cuando el administrador cambia algo y cuando le toca empezar o caducar, sin tocar el importe escrito.
+  const resultRef = useRef<Lookup | null>(null);
+  resultRef.current = result;
+  const refreshLoaded = useCallback(async () => {
+    const current = resultRef.current;
+    if (!current || submitting.current) return;
+    try {
+      const response = await fetch(`/api/bonos/${encodeURIComponent(current.coupon.code)}`, { cache: "no-store" });
+      if (resultRef.current?.coupon.code !== current.coupon.code || submitting.current) return;
+      if (response.status === 404) {
+        setResult(null);
+        setError("Este bono ya no está disponible.");
+        return;
+      }
+      if (!response.ok) return;
+      const data = await response.json() as Lookup;
+      if (data.coupon?.businessId === businessId) setResult(data);
+    } catch {
+      // Sin conexión: se mantiene lo que hay en pantalla.
+    }
+  }, [businessId]);
 
   useEffect(() => {
-    if (!result || !canRedeem) return;
+    const onChange = () => { void refreshLoaded(); };
+    window.addEventListener("live:changed", onChange);
+    return () => window.removeEventListener("live:changed", onChange);
+  }, [refreshLoaded]);
+
+  useEffect(() => {
+    if (!resultStart || !resultEnd) return;
+    const { opensAt, closesAt } = validityInstantsBetween(resultStart, resultEnd);
+    const timers = [opensAt, closesAt].map((instant) => {
+      const delay = instant.getTime() - Date.now() + 1_500;
+      return delay > 0 && delay < 2_000_000_000 ? window.setTimeout(() => { void refreshLoaded(); }, delay) : null;
+    });
+    return () => timers.forEach((timer) => timer !== null && window.clearTimeout(timer));
+  }, [refreshLoaded, resultCode, resultStart, resultEnd]);
+
+  useEffect(() => {
+    if (!resultCode || !canRedeem) return;
     const focusTimer = window.setTimeout(() => expenseInputRef.current?.focus(), 0);
     return () => window.clearTimeout(focusTimer);
-  }, [canRedeem, result]);
+  }, [canRedeem, resultCode]);
 
   useEffect(() => {
     if (entryMode !== "manual") return;

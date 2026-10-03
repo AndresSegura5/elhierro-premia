@@ -8,6 +8,8 @@ import type { Business } from "./types";
 import * as sqliteAuth from "./auth-sqlite";
 import { hasPostgresDatabase, getPostgres } from "./postgres";
 import { getBusinessRecord, isBusinessActive, makeBusinessId } from "./store";
+import { publishLive } from "./live";
+import { liveScope } from "./live-scopes";
 import { initialBusinessUsername } from "./business-credentials";
 import type { SignInResult } from "./auth-result";
 
@@ -143,6 +145,7 @@ export async function signInDetailed(username: string, password: string, role: R
       await tx`DELETE FROM public.sessions WHERE token_hash = ${tokenHash(previousToken)}`;
     }
     await tx`INSERT INTO public.login_events (user_id, username, role, session_token_hash, signed_in_at) VALUES (${user.id}, ${user.username}, ${user.role}, ${tokenHash(token)}, now())`;
+    await publishLive([liveScope.admin], tx);
   });
   jar.set(COOKIE, token, {
     httpOnly: true,
@@ -194,6 +197,7 @@ export async function signOut() {
   if (token) {
     await getPostgres()`UPDATE public.login_events SET signed_out_at = COALESCE(signed_out_at, now()) WHERE session_token_hash = ${tokenHash(token)}`;
     await getPostgres()`DELETE FROM public.sessions WHERE token_hash = ${tokenHash(token)}`;
+    await publishLive([liveScope.admin]);
   }
   jar.delete(COOKIE);
 }
@@ -236,6 +240,7 @@ export async function createAdminAccount(firstName: string, lastName: string, em
   } catch {
     throw new Error("No se pudo crear la cuenta. Comprueba que el correo no esté ya registrado.");
   }
+  await publishLive([liveScope.admin]);
   return { temporaryPassword: password };
 }
 
@@ -250,6 +255,7 @@ export async function resetAdminPassword(targetUserId: number, actingAdminId: nu
     if (!target) throw new Error("No se encontró ese administrador.");
     await tx`UPDATE public.users SET password_hash = ${hash}, must_change_password = true, failed_attempts = 0, locked_until = NULL WHERE id = ${targetUserId}`;
     await tx`DELETE FROM public.sessions WHERE user_id = ${targetUserId}`;
+    await publishLive([liveScope.admin], tx);
   });
   return { temporaryPassword: password };
 }
@@ -265,6 +271,7 @@ export async function completeAdminPasswordSetup(password: string) {
   await getPostgres().begin(async (tx) => {
     await tx`UPDATE public.users SET password_hash = ${hash}, must_change_password = false, failed_attempts = 0, locked_until = NULL WHERE id = ${session.id} AND role = 'admin'`;
     await tx`DELETE FROM public.sessions WHERE user_id = ${session.id} AND token_hash <> ${tokenHash(token)}`;
+    await publishLive([liveScope.admin], tx);
   });
 }
 
@@ -280,6 +287,7 @@ export async function changeAdminPassword(currentPassword: string, newPassword: 
   await getPostgres().begin(async (tx) => {
     await tx`UPDATE public.users SET password_hash = ${hash}, failed_attempts = 0, locked_until = NULL WHERE id = ${session.id} AND role = 'admin'`;
     if (token) await tx`DELETE FROM public.sessions WHERE user_id = ${session.id} AND token_hash <> ${tokenHash(token)}`;
+    await publishLive([liveScope.admin], tx);
   });
 }
 
@@ -312,6 +320,7 @@ export async function syncMerchantUsername(businessId: string, name: string) {
         await tx`DELETE FROM public.sessions WHERE user_id = ${account.id}`;
       }
     }
+    if (renamed.some((account) => account.nextUsername !== account.username)) await publishLive([liveScope.admin, liveScope.business(businessId)], tx);
   });
 }
 
@@ -327,6 +336,7 @@ export async function createBusinessWithMerchant(business: Omit<Business, "id">)
       VALUES (${id}, ${business.name}, ${business.category}, ${business.municipality}, ${business.area}, ${business.phone}, ${business.address}, ${business.lat}, ${business.lng}, ${business.openingHours}, ${business.description}, ${business.image})
     `;
     await tx`INSERT INTO public.users (username, password_hash, role, business_id) VALUES (${username}, ${hash}, 'merchant', ${id})`;
+    await publishLive([liveScope.admin, liveScope.public, liveScope.business(id)], tx);
   });
   return { business: { ...business, id }, username, password };
 }
@@ -345,6 +355,7 @@ export async function deleteBusinessAndAccess(businessId: string, actor?: { id: 
         await tx`UPDATE public.businesses SET active = false, updated_at = now() WHERE id = ${businessId}`;
         await tx`INSERT INTO public.audit_events (actor_user_id, actor_username, action, entity_type, entity_id, details, created_at)
           VALUES (${actor?.id ?? null}, ${actor?.username ?? null}, 'delete_business', 'business', ${businessId}, ${`${Number(coupons.total)} bonos asociados; comercio archivado`}, now())`;
+    await publishLive([liveScope.admin, liveScope.public, liveScope.business(businessId)], tx);
     return true;
   });
 }
@@ -367,6 +378,7 @@ export async function restoreBusinessWithAccess(businessId: string) {
     } else {
       await tx`INSERT INTO public.users (username, password_hash, role, business_id) VALUES (${username}, ${hash}, 'merchant', ${businessId})`;
     }
+    await publishLive([liveScope.admin, liveScope.public, liveScope.business(businessId)], tx);
   });
   return { businessName: business.name, username, password };
 }
@@ -388,6 +400,7 @@ export async function provisionMerchant(businessId: string) {
     } else {
       await tx`INSERT INTO public.users (username, password_hash, role, business_id) VALUES (${username}, ${hash}, 'merchant', ${businessId})`;
     }
+    await publishLive([liveScope.admin, liveScope.business(businessId)], tx);
   });
   return { username, password };
 }

@@ -38,6 +38,39 @@ export function todayInCanary(now = new Date()) {
   return canaryClock(now).day;
 }
 
+// Instante (UTC) que corresponde a una hora local de Canarias; resuelve el cambio de hora.
+function canaryInstant(day: string, minuteOfDay: number) {
+  const [year, month, date] = day.split("-").map(Number);
+  const wanted = Date.UTC(year, month - 1, date, 0, minuteOfDay);
+  let guess = wanted;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const shown = canaryClock(new Date(guess));
+    const [shownYear, shownMonth, shownDate] = shown.day.split("-").map(Number);
+    const difference = wanted - Date.UTC(shownYear, shownMonth - 1, shownDate, 0, shown.minuteOfDay);
+    if (difference === 0) break;
+    guess += difference;
+  }
+  return new Date(guess);
+}
+
+// Momentos en que un bono cambia de estado por sí solo: empieza (00:01) y caduca (00:00 del día siguiente al último).
+export function validityInstantsBetween(startDate: string, lastDay: string) {
+  return {
+    opensAt: canaryInstant(startDate, VALIDITY_OPENS_AT_MINUTE),
+    closesAt: canaryInstant(addDays(lastDay, 1), 0),
+  };
+}
+
+export function validityInstants(startDate: string, validityDays: number) {
+  return validityInstantsBetween(startDate, addDays(startDate, validityDays));
+}
+
+// Próximo cambio de estado posterior a "now", o null si ya no habrá más.
+export function nextValidityChange(startDate: string, validityDays: number, now = new Date()) {
+  const { opensAt, closesAt } = validityInstants(startDate, validityDays);
+  return [opensAt, closesAt].find((instant) => instant.getTime() > now.getTime()) ?? null;
+}
+
 export function couponStatus(startDate: string, validityDays: number, amountCents: number, usedCents: number, now = new Date()): CouponStatus {
   const { day, minuteOfDay } = canaryClock(now);
   if (usedCents >= amountCents) return "redeemed";

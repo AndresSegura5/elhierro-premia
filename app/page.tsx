@@ -3,12 +3,17 @@ import { ArrowUpRight } from "lucide-react";
 import { CommerceSection } from "@/components/CommerceSection";
 import { Header } from "@/components/Header";
 import { HeroVoucher } from "@/components/HeroVoucher";
+import { LiveRefresh } from "@/components/LiveRefresh";
+import { getLiveProps } from "@/lib/live";
+import { liveScope } from "@/lib/live-scopes";
 import { listBusinesses, listRaces } from "@/lib/store";
 import { formatDate } from "@/lib/bonos";
 
 export const dynamic = "force-dynamic";
 export default async function Home() {
-  const [races, businesses] = await Promise.all([
+  // Las versiones se leen primero: cualquier cambio posterior a los datos se detecta como más reciente.
+  const [live, races, businesses] = await Promise.all([
+    getLiveProps([liveScope.public]),
     listRaces(),
     listBusinesses(),
   ]);
@@ -67,6 +72,7 @@ export default async function Home() {
         <CommerceSection businesses={businesses} />
       </div>
       </main>
+      <LiveRefresh {...live} audience="public" />
     </>
   );
 }

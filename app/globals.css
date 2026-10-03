@@ -4999,3 +4999,17 @@ body .coupon-voucher-stack .coupon-voucher-svg-business .coupon-voucher-details 
 @media (max-width: 359px) {
   .site-header--menu-open { --mobile-nav-font-size: 18px; }
 }
+
+/* Indicador de actualización en vivo (administración y área del comercio) */
+.live-indicator { position: fixed; z-index: 40; right: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 7px; padding: 6px 11px; border: 1px solid #dce5eb; border-radius: 999px; background: rgba(255, 255, 255, .96); color: #071626; font: 700 var(--text-xs) var(--font-sans); box-shadow: 0 6px 18px rgba(7, 22, 38, .14); pointer-events: none; }
+.live-indicator-dot { width: 8px; height: 8px; border-radius: 50%; background: #1f9d55; }
+.live-indicator[data-state="connecting"] .live-indicator-dot { background: #e0a100; }
+.live-indicator[data-state="offline"] .live-indicator-dot { background: #d64545; }
+.live-indicator[data-state="live"] .live-indicator-dot { animation: live-pulse 2.4s ease-in-out infinite; }
+@keyframes live-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) {
+  .live-indicator[data-state="live"] .live-indicator-dot { animation: none; }
+}
+@media print {
+  .live-indicator { display: none; }
+}

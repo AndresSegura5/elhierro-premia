@@ -4,10 +4,13 @@ import { headers } from "next/headers";
 import { InteractiveTable, type InteractiveTableColumn, type InteractiveTableRow } from "@/components/InteractiveTable";
 import { CouponVoucher } from "@/components/CouponVoucher";
 import { Header } from "@/components/Header";
+import { LiveRefresh } from "@/components/LiveRefresh";
 import { consumeAuthenticatedCouponLookup, consumePublicCouponLookup } from "@/lib/coupon-lookup-limit";
 import { isValidCouponCode } from "@/lib/coupon-code";
 import { getSession } from "@/lib/auth";
-import { formatDate, formatDateTime, formatEuros, VALIDITY_WINDOW_TEXT } from "@/lib/bonos";
+import { formatDate, formatDateTime, formatEuros, validityInstants, VALIDITY_WINDOW_TEXT } from "@/lib/bonos";
+import { getLiveProps } from "@/lib/live";
+import { liveScope } from "@/lib/live-scopes";
 import { getBusinessRecord, getCouponDetails } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -45,12 +48,18 @@ export default async function CouponPage({ params }: Props) {
   }
   const { code } = await params;
   if (!isValidCouponCode(code.trim().toUpperCase())) notFound();
+  // Las versiones se leen antes que los datos: cualquier cambio posterior se detecta como más reciente.
+  const normalizedCode = code.trim().toUpperCase();
+  const liveRace = ({ BES: "bestial", BIM: "bimbache", MER: "meridiano" } as const)[normalizedCode.slice(3, 6) as "BES" | "BIM" | "MER"];
+  const live = await getLiveProps([liveScope.coupon(normalizedCode), ...(liveRace ? [liveScope.race(liveRace)] : [])]);
   const details = await getCouponDetails(code);
   if (!details) notFound();
   if (session?.role === "merchant" && details.coupon.businessId !== session.businessId) notFound();
   const { coupon, race, redemptions } = details;
   const business = await getBusinessRecord(coupon.businessId);
   if (!business) notFound();
+  const { opensAt, closesAt } = validityInstants(coupon.startDate, race.validityDays);
+  const refreshAt = [opensAt, closesAt].filter((instant) => instant.getTime() + 1_500 > Date.now()).map((instant) => instant.toISOString());
   const redemptionColumns: InteractiveTableColumn[] = [
     { key: "date", label: "Fecha y hora" }, { key: "amount", label: "Importe" }, { key: "balance", label: "Saldo posterior" },
   ];
@@ -83,6 +92,7 @@ export default async function CouponPage({ params }: Props) {
         </section>}
 
       </main>
+      <LiveRefresh {...live} audience="public" refreshAt={refreshAt} />
     </>
   );
 }

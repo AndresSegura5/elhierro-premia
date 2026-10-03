@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { ChevronDown, QrCode, Store, Ticket } from "lucide-react";
 import { BonoLookupInline } from "@/components/BonoLookupInline";
 import { Header } from "@/components/Header";
+import { LiveRefresh } from "@/components/LiveRefresh";
 import { PageTitleHero } from "@/components/PageTitleHero";
 import { siteContentDefaults } from "@/lib/data";
+import { getLiveProps } from "@/lib/live";
+import { liveScope } from "@/lib/live-scopes";
 import { getSiteContent, listRaces } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +17,8 @@ export const metadata: Metadata = {
 };
 
 export default async function BonoPage() {
-  const [races, pageContent] = await Promise.all([
+  const [live, races, pageContent] = await Promise.all([
+    getLiveProps([liveScope.public]),
     listRaces(),
     getSiteContent<typeof siteContentDefaults["coupon.page"]>("coupon.page"),
   ]);
@@ -81,6 +85,7 @@ export default async function BonoPage() {
         </section>
 
       </main>
+      <LiveRefresh {...live} audience="public" />
     </>
   );
 }
