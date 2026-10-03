@@ -18,7 +18,7 @@
 .legal-navigation a:hover:not([aria-current]) { background: #edf2f8; }
 .legal-layout { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 36px; align-items: start; }
 .legal-index { position: sticky; top: 24px; padding-top: 12px; }
-.legal-index .eyebrow { font-size: 11px; padding: 8px 10px; margin: 0 0 20px; }
+.legal-index .eyebrow { font-size: 12px; padding: 8px 10px; margin: 0 0 20px; }
 .legal-index ol { display: grid; gap: 14px; margin: 0; padding-left: 22px; color: #566b83; font-size: 13px; line-height: 1.6; }
 .legal-index a { color: #071626; text-decoration: none; }
 .legal-index a:hover { color: #071626; text-decoration: underline; }
