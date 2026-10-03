@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import {
   ArrowUpRight,
-  Compass,
   Dumbbell,
   Heart,
   MapPin,
@@ -77,9 +76,9 @@ export function CommerceSection({ businesses }: { businesses: Business[] }) {
           <em>El Hierro.</em>
         </h2>
         <p className="commerce-intro">
-          Gastronomía, deporte, artesanía y mucho más.<br className="commerce-break" />{" "}
-          Utiliza tu bono en los comercios de la isla<br className="commerce-break" />{" "}
-          y vive una experiencia completa.
+          Cada puerta de la isla guarda un oficio, un sabor, una historia.<br className="commerce-break" />{" "}
+          Acércate a tu comercio, elige con calma<br className="commerce-break" />{" "}
+          y deja que tu bono se quede en El Hierro.
         </p>
         <div
           className="commerce-search"
@@ -183,7 +182,6 @@ export function CommerceSection({ businesses }: { businesses: Business[] }) {
           showMunicipalities
           weatherTheme="light"
         />
-        <div className="map-compass" aria-hidden="true"><Compass size={28} /></div>
       </div>
     </section>
   );

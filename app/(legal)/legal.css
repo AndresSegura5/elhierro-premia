@@ -52,7 +52,6 @@
 }
 @media (max-width: 480px) {
   .legal-main { padding-bottom: 36px; }
-  .legal-main .page-title-hero h1 { font-size: 36px; }
   .legal-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; gap: 4px; }
   .legal-navigation a { justify-content: center; padding: 0 8px; font-size: 13px; }
   .legal-index ol { grid-template-columns: 1fr; }

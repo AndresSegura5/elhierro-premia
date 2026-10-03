@@ -62,9 +62,8 @@
 @media (max-width: 760px) {
   .directory-page { padding-bottom: 56px; }
   .directory-page::before { inset: 190px 0 0; }
-  .directory-page > .page-title-hero { height: 190px; padding-bottom: 40px; }
-  .directory-page > .page-title-hero h1 { font-size: clamp(23px, 4.5vw, 32px); }
-  .directory-content { display: flex; flex-direction: column; gap: 16px; width: calc(100% - (2 * var(--page-gutter))); height: auto; margin-top: -40px; }
+  .directory-page > .page-title-hero { height: auto; min-height: 190px; padding-bottom: 64px; }
+    .directory-content { display: flex; flex-direction: column; gap: 16px; width: calc(100% - (2 * var(--page-gutter))); height: auto; margin-top: -40px; }
   .directory-map { flex: none; height: 400px; border-radius: 6px; }
   .directory-map--expanded { inset: 0; height: auto; border-radius: 0; }
   .directory-panel { height: 560px; border-radius: 6px; }

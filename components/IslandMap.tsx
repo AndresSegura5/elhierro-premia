@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
   ArrowUpRight,
@@ -27,54 +27,16 @@ import "maplibre-gl/dist/maplibre-gl.css";
 
 const MAP_STYLE = "/branding/positron-sea.json";
 const MAP_ATTRIBUTION = '<span class="map-attribution-copyright">&copy;</span> <a href="https://www.openmaptiles.org/">OpenMapTiles</a> · <span class="map-attribution-copyright">&copy;</span> <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-const MUNICIPALITY_LABEL_POSITIONS: Record<string, [number, number]> = {
-  FRONTERA: [27.76, -18.07],
-  VALVERDE: [27.83, -17.87],
-  "EL PINAR": [27.68, -18.07],
-};
-type CoastSide = "north" | "south" | "east";
-// On narrow maps the island fills the frame, so each label sits a fixed distance
-// off its own stretch of coast, found where this line crosses the island outline.
-const COMPACT_LABEL_COASTS: Record<string, { lat?: number; lng?: number; side: CoastSide }> = {
-  FRONTERA: { lng: -18.07, side: "north" },
-  "EL PINAR": { lng: -18.08, side: "south" },
-  VALVERDE: { lat: 27.77, side: "east" },
-};
-const COMPACT_EAST_LABEL_WIDTH = 80;
-const COMPACT_EAST_LABEL_MIN_LAT = 27.7;
-const COMPACT_MAP_WIDTH = 720;
-const COMPACT_LABEL_GAP = 10;
-const COMPACT_LABEL_SIZE: [number, number] = [104, 24];
+const WEATHER_MUNICIPALITIES = ["Valverde", "Frontera", "El Pinar"];
 
-function coastPoint(coords: [number, number][], { lat, lng, side }: { lat?: number; lng?: number; side: CoastSide }) {
-  const fixed = lng === undefined ? 0 : 1;
-  const value = (lng ?? lat)!;
-  const crossings: number[] = [];
-  coords.forEach((a, index) => {
-    const b = coords[(index + 1) % coords.length];
-    if (a[fixed] === b[fixed] || (a[fixed] - value) * (b[fixed] - value) > 0) return;
-    const t = (value - a[fixed]) / (b[fixed] - a[fixed]);
-    crossings.push(a[1 - fixed] + t * (b[1 - fixed] - a[1 - fixed]));
-  });
-  if (!crossings.length) return undefined;
-  const edge = side === "south" ? Math.min(...crossings) : Math.max(...crossings);
-  return (fixed === 1 ? [edge, value] : [value, edge]) as [number, number];
-}
+type MunicipalityWeather = { name: string; temperature: string; weatherCode: number };
 
-function compactLabelAnchor(side: CoastSide): [number, number] {
-  const [width, height] = COMPACT_LABEL_SIZE;
-  if (side === "north") return [width / 2, height + COMPACT_LABEL_GAP];
-  if (side === "south") return [width / 2, -COMPACT_LABEL_GAP];
-  return [-COMPACT_LABEL_GAP, height / 2];
-}
-
-function weatherIconMarkup(code: number) {
-  const Icon = code === 0 ? Sun
+function weatherIconFor(code: number) {
+  return code === 0 ? Sun
     : code <= 2 ? CloudSun
       : code === 3 || (code >= 45 && code <= 48) ? (code >= 45 ? CloudFog : Cloud)
         : code >= 95 ? CloudLightning
           : CloudRain;
-  return renderToStaticMarkup(<Icon size={22} strokeWidth={2.2} aria-hidden="true" />);
 }
 
 export function iconForBusiness(category: string) {
@@ -89,19 +51,25 @@ export function iconForBusiness(category: string) {
 }
 
 function cardPositionFor(point: { x: number; y: number }, size: { x: number; y: number }) {
-  const width = Math.min(286, size.x - 24);
+  const maxWidth = Math.min(286, size.x - 24);
+  const minWidth = 200;
   const gap = 16;
-  const fitsRight = point.x + width + gap <= size.x - 12;
-  const fitsLeft = point.x - width - gap >= 12;
-  const side = fitsRight ? "right" : fitsLeft ? "left" : "over";
-  const left = fitsRight
-    ? point.x + gap
-    : fitsLeft
-      ? point.x - width - gap
+  const rightRoom = size.x - point.x - gap - 12;
+  const leftRoom = point.x - gap - 12;
+  // Prefer a full-width card beside the marker; on narrow maps shrink it rather than cover the marker.
+  const side = rightRoom >= maxWidth ? "right"
+    : leftRoom >= maxWidth ? "left"
+      : Math.max(rightRoom, leftRoom) >= minWidth ? (rightRoom >= leftRoom ? "right" : "left")
+        : "over";
+  const width = side === "over" ? maxWidth : Math.min(maxWidth, side === "right" ? rightRoom : leftRoom);
+  const left = side === "right" ? point.x + gap
+    : side === "left" ? point.x - width - gap
       : point.x > size.x / 2 ? 12 : size.x - width - 12;
   return {
     x: Math.max(12, Math.min(left, size.x - width - 12)),
-    y: Math.max(150, Math.min(point.y, size.y - 150)),
+    y: point.y,
+    width,
+    mapHeight: size.y,
     side,
   };
 }
@@ -145,6 +113,9 @@ export function IslandMap({
   const activeIdRef = useRef(displayedId);
   const highlightedIdRef = useRef(highlightedId);
   const [cardPosition, setCardPosition] = useState<ReturnType<typeof cardPositionFor> | null>(null);
+  const [weatherSummary, setWeatherSummary] = useState<MunicipalityWeather[]>([]);
+  const cardRef = useRef<HTMLElement>(null);
+  const [cardBox, setCardBox] = useState<{ top: number; arrowY: number } | null>(null);
   onSelectRef.current = onSelect;
   businessesRef.current = businesses;
   visibleBusinessIdsRef.current = visibleBusinessIds;
@@ -164,6 +135,19 @@ export function IslandMap({
     const point = map.current.latLngToContainerPoint([activeBusiness.lat, activeBusiness.lng]);
     setCardPosition(cardPositionFor(point, map.current.getSize()));
   }, [displayedId, highlightedId, activeBusiness]);
+
+  // The card is clamped inside the map, so its pointer is placed at the marker height, not the card centre.
+  useLayoutEffect(() => {
+    const card = cardRef.current;
+    if (!card || !cardPosition) {
+      setCardBox(null);
+      return;
+    }
+    const height = card.offsetHeight;
+    const top = Math.max(12, Math.min(cardPosition.y - height / 2, cardPosition.mapHeight - height - 12));
+    const arrowY = Math.max(16, Math.min(cardPosition.y - top, height - 16));
+    setCardBox((current) => (current?.top === top && current.arrowY === arrowY ? current : { top, arrowY }));
+  }, [cardPosition, activeBusiness]);
 
   useEffect(() => {
     let disposed = false;
@@ -223,10 +207,6 @@ export function IslandMap({
       }).setView([27.75, -17.98], 11);
       map.current = instance;
       instanceForCleanup = instance;
-      // Keep weather details outside Leaflet's clipped container so they can
-      // expand over the map edge when a label sits near the side.
-      const weatherPane = instance.createPane("weatherPane", element.current.parentElement ?? instance.getContainer());
-      weatherPane.style.zIndex = "900";
       if (zoomEnabled) {
         L.control.zoom({ position: clipToIsland ? "topright" : "bottomright" }).addTo(instance);
       }
@@ -262,29 +242,23 @@ export function IslandMap({
         }).addTo(instance);
       }
       if ((clipToIsland || showMunicipalities) && municipalityGeoJson?.features?.length) {
-        const municipalityWeather = new Map<string, {
-          temperature: string;
-          weatherCode: number;
-        }>();
         if (showMunicipalities) {
-          await Promise.all(
-            ["Valverde", "Frontera", "El Pinar"].map(async (name) => {
+          const results = await Promise.all(
+            WEATHER_MUNICIPALITIES.map(async (name): Promise<MunicipalityWeather | undefined> => {
               try {
                 const response = await fetch(`/api/weather?municipality=${encodeURIComponent(name)}`);
-                if (!response.ok) return;
+                if (!response.ok) return undefined;
                 const data = await response.json();
                 const temperature = data.current?.temperature_2m;
-                if (typeof temperature === "number" && typeof data.current?.weather_code === "number") {
-                  municipalityWeather.set(name.toUpperCase(), {
-                    temperature: `${Math.round(temperature)}°C`,
-                    weatherCode: data.current.weather_code,
-                  });
-                }
+                if (typeof temperature !== "number" || typeof data.current?.weather_code !== "number") return undefined;
+                return { name, temperature: `${Math.round(temperature)}°C`, weatherCode: data.current.weather_code };
               } catch {
-                // The boundaries remain useful if a weather request fails.
+                return undefined;
               }
             }),
           );
+          if (disposed) return;
+          setWeatherSummary(results.filter((item): item is MunicipalityWeather => Boolean(item)));
         }
 
         L.geoJSON(municipalityGeoJson, {
@@ -296,41 +270,8 @@ export function IslandMap({
             fillOpacity: showMunicipalities ? 0.1 : 0.02,
             fill: true,
           },
-          onEachFeature: (feature, layer) => {
+          onEachFeature: (_feature, layer) => {
             const municipality = layer as LeafletPath;
-            const rawName = String(feature.properties?.nombre ?? "").trim();
-            const weather = municipalityWeather.get(rawName.toUpperCase());
-            if (showMunicipalities && weather) {
-              const coast = instance.getSize().x < COMPACT_MAP_WIDTH ? COMPACT_LABEL_COASTS[rawName.toUpperCase()] : undefined;
-              let coastPosition = coast && coastPoint(islandCoords, coast);
-              // Labels are placed before the map fits the island, so measure against that final view.
-              // The east label slides down the coast until it fits inside the frame.
-              if (coast?.side === "east" && coastPosition) {
-                const islandBounds = L.latLngBounds(islandCoords);
-                const padding = clipToIsland ? 12 : 24;
-                const fitZoom = instance.getBoundsZoom(islandBounds, false, L.point(padding, padding)) + (clipToIsland ? 0.1 : 0);
-                const frameRight = instance.project(islandBounds.getCenter(), fitZoom).x + instance.getSize().x / 2;
-                while (coastPosition && coastPosition[0] > COMPACT_EAST_LABEL_MIN_LAT
-                  && instance.project(coastPosition, fitZoom).x + COMPACT_LABEL_GAP + COMPACT_EAST_LABEL_WIDTH > frameRight) {
-                  coastPosition = coastPoint(islandCoords, { ...coast, lat: coastPosition[0] - 0.005 });
-                }
-              }
-              const labelPosition = coastPosition ?? MUNICIPALITY_LABEL_POSITIONS[rawName.toUpperCase()];
-              const startAligned = Boolean(coastPosition) && coast?.side === "east";
-              if (labelPosition) {
-                L.marker(labelPosition, {
-                  interactive: false,
-                  keyboard: false,
-                  pane: "weatherPane",
-                  icon: L.divIcon({
-                    className: "municipality-weather-label-marker",
-                    html: `<span class="municipality-weather-label${weatherTheme === "light" ? " municipality-weather-label--light" : ""}${coastPosition ? " municipality-weather-label--coast" : ""}${startAligned ? " municipality-weather-label--start" : ""}"><span class="municipality-weather-icon">${weatherIconMarkup(weather.weatherCode)}</span><strong>${weather.temperature}</strong></span>`,
-                    iconSize: coastPosition ? COMPACT_LABEL_SIZE : [104, 42],
-                    iconAnchor: coast && coastPosition ? compactLabelAnchor(coast.side) : [52, 21],
-                  }),
-                }).addTo(instance);
-              }
-            }
             municipality.on({
               mouseover: () => municipality.setStyle({ fillColor: "#2563eb", fillOpacity: showMunicipalities ? 0.2 : 0.22 }),
               mouseout: () => municipality.setStyle({ fillColor: showMunicipalities ? "#8aa6b7" : "#071626", fillOpacity: showMunicipalities ? 0.1 : 0.02 }),
@@ -454,7 +395,7 @@ export function IslandMap({
       markers.current.clear();
       markerBusinesses.current.clear();
     };
-  }, [markerStyle, zoomEnabled, scrollWheelZoom, clipToIsland, showMunicipalities, weatherTheme]);
+  }, [markerStyle, zoomEnabled, scrollWheelZoom, clipToIsland, showMunicipalities]);
 
   useEffect(() => {
     syncMarkersRef.current?.(businesses, visibleBusinessIds);
@@ -468,10 +409,32 @@ export function IslandMap({
         role="region"
         aria-label="Ubicación de los comercios en El Hierro"
       />
+      {weatherSummary.length > 0 && (
+        <ul className={`island-map-weather${weatherTheme === "light" ? " island-map-weather--light" : ""}`} aria-label="Tiempo por municipio">
+          {weatherSummary.map((weather) => {
+            const Icon = weatherIconFor(weather.weatherCode);
+            return (
+              <li key={weather.name}>
+                <Icon size={18} strokeWidth={2.2} aria-hidden="true" />
+                <span>{weather.name}</span>
+                <strong>{weather.temperature}</strong>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       {activeBusiness && cardPosition ? (
         <article
+          ref={cardRef}
           className={`business-map-card business-map-card--${cardPosition.side}`}
-          style={{ left: cardPosition.x, top: cardPosition.y }}
+          style={{
+            left: cardPosition.x,
+            width: cardPosition.width,
+            top: cardBox?.top ?? cardPosition.y,
+            transform: cardBox ? "none" : undefined,
+            visibility: cardBox ? undefined : "hidden",
+            "--card-arrow-y": cardBox ? `${cardBox.arrowY}px` : "50%",
+          } as CSSProperties}
           aria-label={`Información de ${activeBusiness.name}`}
           onMouseEnter={() => {
             if (hoverCloseTimer.current) clearTimeout(hoverCloseTimer.current);
