@@ -436,9 +436,7 @@ body > main { margin-top: 0; margin-bottom: 0; }
   color: #fff;
   text-decoration: none;
   filter: drop-shadow(0 18px 30px rgba(2, 12, 22, .38));
-  transition: transform .3s cubic-bezier(.2, .8, .2, 1);
 }
-.hero-voucher:hover { transform: translateY(-4px); }
 .hero-voucher:focus-visible { outline: 3px solid var(--accent); outline-offset: 6px; border-radius: 14px; }
 /* The mask punches real ticket notches, so the hero photo shows through them. */
 .hero-voucher-body {
@@ -448,8 +446,9 @@ body > main { margin-top: 0; margin-bottom: 0; }
   border-radius: 14px;
   background:
     radial-gradient(120% 90% at 100% 0%, rgba(255, 122, 26, .14), transparent 55%),
-    #fffaf2;
+    rgba(255, 250, 242, .89);
   box-shadow: inset 0 4px 0 var(--accent);
+  backdrop-filter: blur(10px);
   -webkit-mask:
     radial-gradient(circle 11px at calc(100% - var(--stub)) 0, #0000 98%, #000) top / 100% 51% no-repeat,
     radial-gradient(circle 11px at calc(100% - var(--stub)) 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
@@ -457,17 +456,11 @@ body > main { margin-top: 0; margin-bottom: 0; }
     radial-gradient(circle 11px at calc(100% - var(--stub)) 0, #0000 98%, #000) top / 100% 51% no-repeat,
     radial-gradient(circle 11px at calc(100% - var(--stub)) 100%, #0000 98%, #000) bottom / 100% 51% no-repeat;
 }
-.hero-voucher-info { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 18px 16px; min-width: 0; padding: 26px 20px 22px 28px; }
+.hero-voucher-info { display: grid; align-content: space-between; gap: 20px; min-width: 0; padding: 26px 20px 22px 28px; }
 .hero-voucher-title { display: grid; min-width: 0; color: #0c1622; font: 400 38px/.95 var(--font-display); text-transform: uppercase; }
 .hero-voucher-title em { color: var(--accent-dark); font-style: normal; }
-.hero-voucher-title small { width: fit-content; margin-top: 8px; padding-bottom: 6px; border-bottom: 3px solid var(--accent); font: 700 17px/1.2 var(--font-sans); text-transform: none; }
-/* Ragged brush stroke, echoing the printed Bestial voucher. */
-.hero-voucher-amount { display: grid; justify-items: center; padding: 10px 16px 9px; background: #0c1622; color: #fff; text-transform: uppercase; transform: rotate(-4deg); clip-path: polygon(3% 8%, 22% 2%, 48% 6%, 71% 0, 97% 5%, 100% 38%, 96% 62%, 100% 94%, 74% 98%, 50% 93%, 24% 100%, 2% 95%, 5% 66%, 0 40%); }
-.hero-voucher-amount strong { font: 400 46px/.95 var(--font-display); white-space: nowrap; }
-.hero-voucher-amount small { color: var(--accent); font: 400 12px/1.1 var(--font-display); letter-spacing: .04em; white-space: nowrap; }
 .hero-voucher-action { grid-column: 1 / -1; display: inline-flex; align-items: center; gap: 6px; width: fit-content; color: #0c1622; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; transition: gap .25s ease, color .25s ease; }
 .hero-voucher-action svg { flex: 0 0 auto; color: var(--accent-dark); }
-.hero-voucher:hover .hero-voucher-action { gap: 10px; color: var(--accent-dark); }
 .hero-voucher-stub { display: grid; place-items: center; padding: 16px 14px; background: linear-gradient(160deg, var(--accent), var(--accent-dark)); }
 .hero-voucher-qr { width: 100%; aspect-ratio: 1; padding: 6px; border-radius: 8px; background: #fff; }
 .hero-voucher-qr .qr-ticket { display: contents; }
@@ -5482,10 +5475,13 @@ td a {
 }
 
 @media (max-width: 599px) {
-  .hero-voucher { --stub: 104px; justify-self: stretch; }
-  .hero-voucher-info { grid-template-columns: 1fr; justify-items: start; gap: 14px; padding: 18px 14px 16px 18px; }
-  .hero-voucher-title { font-size: 28px; }
-  .hero-voucher-amount strong { font-size: 32px; }
+  .hero-voucher { --stub: 46%; justify-self: stretch; }
+  .hero-voucher-info { gap: 16px; padding: 22px 12px 20px 20px; }
+  .hero-voucher-title { font-size: 22px; }
+  .hero-voucher-title em { margin: 2px 0; font-size: 2.3em; line-height: .9; }
+  .hero-voucher-action { font-size: 10px; letter-spacing: .08em; }
+  .hero-voucher-stub { padding: 16px; }
+  .hero-voucher-qr { padding: 8px; border-radius: 12px; box-shadow: 0 8px 18px rgba(90, 36, 0, .28); }
   .home-inner .race-rail { grid-template-columns: 1fr; gap: 12px; }
   .race-rail-item { min-height: 156px; }
   .race-rail-overlay {
@@ -5498,9 +5494,10 @@ td a {
 }
 
 @media (max-width: 359px) {
-  .hero-voucher { --stub: 96px; }
-  .hero-voucher-title { font-size: 24px; }
-  .hero-voucher-stub { padding: 12px 10px; }
+  .hero-voucher { --stub: 44%; }
+  .hero-voucher-info { padding: 18px 10px 16px 16px; }
+  .hero-voucher-title { font-size: 19px; }
+  .hero-voucher-stub { padding: 12px; }
   .hero-inner .page-title-hero--home { align-items: stretch; flex-direction: column; }
   .page-title-hero--home h2 { font-size: 26px; }
   .race-rail-meta { grid-template-columns: 38px minmax(0, 1fr) 28px; gap: 10px; padding: 14px; }
