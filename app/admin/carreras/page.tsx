@@ -7,7 +7,7 @@ import { ResetRaceCouponsButton } from "@/components/ResetRaceCouponsButton";
 import { InteractiveTable, type InteractiveTableColumn, type InteractiveTableRow } from "@/components/InteractiveTable";
 import { Header } from "@/components/Header";
 import { requireAdmin } from "@/lib/auth";
-import { addDays, formatDate, formatDateTime, formatEuros } from "@/lib/bonos";
+import { addDays, formatDate, formatDateTime, formatEuros, VALIDITY_CLOSES_LABEL, VALIDITY_OPENS_LABEL, VALIDITY_WINDOW_TEXT } from "@/lib/bonos";
 import { demoWritesEnabled, listAllBusinesses, listRaceCoupons, listRaceRedemptions, listRaces } from "@/lib/store";
 import { generateRaceCoupons, saveRaceSettings } from "../actions";
 import { AdminSectionNav } from "@/components/AdminSectionNav";
@@ -115,8 +115,8 @@ export default async function AdminPage({ searchParams }: {
               </div>
               <dl>
                 <div><dt>Fecha de la carrera</dt><dd>{formatDate(race.raceDate)}</dd></div>
-                <div><dt>Inicio del bono</dt><dd>{formatDate(race.startDate)}</dd></div>
-                <div><dt>Vencimiento</dt><dd>{formatDate(addDays(race.startDate, race.validityDays))}</dd></div>
+                <div><dt>Inicio del bono</dt><dd>{formatDate(race.startDate)} · {VALIDITY_OPENS_LABEL}</dd></div>
+                <div><dt>Vencimiento</dt><dd>{formatDate(addDays(race.startDate, race.validityDays))} · {VALIDITY_CLOSES_LABEL}</dd></div>
                 <div><dt>Vigencia</dt><dd>{race.validityDays} días</dd></div>
               </dl>
             </section>
@@ -132,7 +132,7 @@ export default async function AdminPage({ searchParams }: {
                 <label><span>Vigencia (días)</span><input name="validityDays" type="number" min="1" max="365" step="1" defaultValue={race.validityDays} required disabled={!canWrite} /></label>
                 <button type="submit" className="button" disabled={!canWrite}>Guardar</button>
               </form>
-              <p className="admin-settings-note">El bono es válido desde el día de inicio hasta el final del día de vencimiento. Los cambios de fecha se aplican también a los bonos ya emitidos.</p>
+              <p className="admin-settings-note">{VALIDITY_WINDOW_TEXT} Los cambios de fecha se aplican también a los bonos ya emitidos.</p>
               <div className="admin-issue-row">
                 <p>{raceCoupons.length.toLocaleString("es-ES")} de {race.couponQuantity.toLocaleString("es-ES")} bonos emitidos</p>
                 <div className="admin-issue-actions">

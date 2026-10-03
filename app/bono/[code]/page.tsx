@@ -7,7 +7,7 @@ import { Header } from "@/components/Header";
 import { consumeAuthenticatedCouponLookup, consumePublicCouponLookup } from "@/lib/coupon-lookup-limit";
 import { isValidCouponCode } from "@/lib/coupon-code";
 import { getSession } from "@/lib/auth";
-import { formatDate, formatDateTime, formatEuros } from "@/lib/bonos";
+import { formatDate, formatDateTime, formatEuros, VALIDITY_WINDOW_TEXT } from "@/lib/bonos";
 import { getBusinessRecord, getCouponDetails } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
@@ -73,6 +73,7 @@ export default async function CouponPage({ params }: Props) {
             <span>Inicio <strong>{formatDate(coupon.startDate)}</strong></span>
             <span>Caduca <strong>{formatDate(coupon.expiresAt)}</strong></span>
           </div>
+          <p className="coupon-validity-note">{VALIDITY_WINDOW_TEXT}</p>
           <CouponVoucher coupon={coupon} race={race} business={business} />
         </section>
 

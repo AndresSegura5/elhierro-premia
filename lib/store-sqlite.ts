@@ -2,7 +2,7 @@ import { generateCouponCode } from "./coupon-token";
 import { mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { addDays, BONO_CENTS, couponStatus, todayInCanary } from "./bonos";
+import { addDays, BONO_CENTS, couponStatus } from "./bonos";
 import { chooseLeastAssignedBusiness } from "./coupon-assignment";
 import { businesses, raceDefaults } from "./data";
 import type { AuditEventRecord, Business, Coupon, CouponAuditRecord, LoginAuditRecord, ManagedBusiness, MerchantAccountAuditRecord, Municipality, Race, Redemption, RedemptionAuditRecord } from "./types";
@@ -513,7 +513,7 @@ export function redeemCoupon(code: string, businessId: string, amountCents: numb
     }
     const race = getRace(row.race_id);
     if (!race) throw new Error("Carrera no reconocida.");
-    const status = couponStatus(race.startDate, race.validityDays, row.amount_cents, row.used_cents, todayInCanary(now));
+    const status = couponStatus(race.startDate, race.validityDays, row.amount_cents, row.used_cents, now);
     if (status === "not-started") throw new Error("Este bono aún no está vigente.");
     if (status === "expired") throw new Error("Este bono ha caducado.");
     if (status === "redeemed") throw new Error("Este bono ya no tiene saldo.");

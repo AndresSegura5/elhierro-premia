@@ -3,7 +3,7 @@ import "server-only";
 import { generateCouponCode } from "./coupon-token";
 import * as sqliteStore from "./store-sqlite";
 import { hasPostgresDatabase, getPostgres } from "./postgres";
-import { addDays, BONO_CENTS, couponStatus, todayInCanary } from "./bonos";
+import { addDays, BONO_CENTS, couponStatus } from "./bonos";
 import { couponRules, raceDefaults, siteContentDefaults } from "./data";
 import { legalContentDefaults } from "./legal-content";
 import { chooseLeastAssignedBusiness } from "./coupon-assignment";
@@ -437,7 +437,7 @@ export async function redeemCoupon(code: string, businessId: string, amountCents
       }
     }
     const startDate = dateString(row.start_date);
-    const status = couponStatus(startDate, Number(row.validity_days), Number(row.amount_cents), Number(row.used_cents), todayInCanary(now));
+    const status = couponStatus(startDate, Number(row.validity_days), Number(row.amount_cents), Number(row.used_cents), now);
     if (status === "not-started") throw new Error("Este bono aún no está vigente.");
     if (status === "expired") throw new Error("Este bono ha caducado.");
     if (status === "redeemed") throw new Error("Este bono ya no tiene saldo.");
